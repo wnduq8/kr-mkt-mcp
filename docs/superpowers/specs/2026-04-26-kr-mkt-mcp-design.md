@@ -30,7 +30,7 @@
 | 백엔드/SaaS | 없음. 사용자 PC stdio 실행 |
 | 페르소나 | 미고정 — 영상 보고 따라 할 수 있는 사람 누구나 |
 | 수익화 | V1에선 안 함. 콘텐츠 + 자연 성장 우선 |
-| 영상 시리즈 | 7편 (티저 + 설치 + 토큰 + 시나리오 3 + 트러블슈팅) |
+| 영상 시리즈 | 8편 (#0 티저 + #1 설치 + #2 토큰 + #3-5 시나리오 + #6 트러블슈팅 + #7 V2 미래) |
 
 ---
 
@@ -159,16 +159,58 @@
 4. **토큰 생성** → 앱 선택 → 권한 `ads_read`, `business_management`, `read_insights` → 만료기간 무기한
 5. 생성된 토큰 복사 → Claude Desktop 설정의 `env.META_ACCESS_TOKEN`에 붙여넣기
 
-### 7-3. 토큰 검증
+### 7-3. 토큰 검증 (다단계 권한 헬스 체크)
 
-서버 부팅 시 `GET /me`로 토큰 살아있는지 확인. 죽었으면 한국어 명확한 에러:
+`/me` 호출만으로는 부족함 — 토큰이 살아있어도 `ads_read` 권한 없거나 광고 계정 자산이 미할당이거나 Insights API 거부될 수 있음. 부팅 시 다음 3단계를 순서대로 통과해야 "정상":
 
+```python
+async def health_check(token: str) -> dict:
+    # 1. 토큰 살아있나
+    me = await get(f"/v25.0/me?access_token={token}")
+    if "error" in me:
+        return {"상태": "토큰만료", "권장조치": "...토큰 재발급..."}
+
+    # 2. 광고 계정 자산 접근 가능한가
+    accounts = await get(f"/v25.0/me/adaccounts?fields=id,account_status&access_token={token}")
+    if not accounts.get("data"):
+        return {"상태": "자산미할당", "권장조치": "...시스템 사용자에 광고 계정 자산 추가..."}
+
+    # 3. 실제 Insights API 호출 가능한가 (1개 계정으로 가벼운 호출)
+    test_account = accounts["data"][0]["id"]
+    probe = await get(
+        f"/v25.0/{test_account}/insights"
+        f"?fields=spend&date_preset=yesterday&level=account&limit=1&access_token={token}"
+    )
+    if "error" in probe:
+        code = probe["error"].get("code")
+        # code 100/200/2635 등 → 권한·앱티어 문제
+        return {"상태": "권한부족", "권장조치": f"...앱 티어/권한 확인 ({code})..."}
+
+    return {"상태": "정상", "테스트계정": test_account, "BUC헤더": probe.get("X-Business-Use-Case-Usage")}
 ```
-META_ACCESS_TOKEN이 만료됐거나 권한이 부족합니다.
-business.facebook.com → 시스템 사용자 → 토큰 재발급 후 환경변수 갱신 → Claude Desktop 재시작.
-```
 
-LLM이 이 메시지를 그대로 사용자에게 전달 가능.
+각 단계마다 한국어 진단 메시지 + 권장 조치를 LLM이 그대로 사용자에게 전달:
+
+| 상태 | 메시지 |
+|------|--------|
+| 토큰만료 | `META_ACCESS_TOKEN이 만료됐거나 무효합니다. business.facebook.com → 시스템 사용자 → 토큰 재발급 후 환경변수 갱신 → Claude Desktop 재시작.` |
+| 자산미할당 | `토큰은 살아있지만 접근 가능한 광고 계정이 없습니다. business.facebook.com → 시스템 사용자 → 자산 추가 → 광고 계정 선택 → "광고 계정 관리" 권한 부여.` |
+| 권한부족 | `Insights API 호출이 거부됐습니다 (오류 코드 ${code}). 가능 원인: (1) 앱이 Development Access 단계인데 호출량 한도 초과 (2) ads_read 권한 누락 (3) 광고 계정이 비활성. 자세히는 docs/auth-poc-checklist.md 참고.` |
+| 정상 | (조용히 진행) |
+
+### 7-4. 토큰 보안 (사용자에게 영상으로 전달할 권장사항)
+
+System User 액세스 토큰은 비즈니스 자산을 폭넓게 노출. 사용자에게 다음을 영상·문서로 안내:
+
+1. **`claude_desktop_config.json` 파일 권한 0600** — 본인만 읽기 가능
+   - macOS: `chmod 600 ~/Library/Application\ Support/Claude/claude_desktop_config.json`
+   - Windows: 파일 속성 → 보안 → 본인 외 사용자 제거
+2. **시스템 사용자 자산 액세스 최소화** — 운영 광고 계정 1~2개만 할당. 모든 광고 계정 자동 추가 금지
+3. **권한 최소화** — `ads_read`, `read_insights`만. `ads_management`(광고 수정 권한)는 본 MCP에 불필요
+4. **무기한 토큰 회피 권장** — 60일 토큰 + 만료 1주 전 알림 영상 콘텐츠로 가이드 (장기적). V1에선 무기한 허용하되 위험 명시
+5. **공유 금지** — 토큰을 GitHub·블로그·캡처에 노출 시 즉시 무효화: business.facebook.com → 시스템 사용자 → 토큰 삭제 → 신규 발급
+6. **유출 의심 시 절차** — 즉시 토큰 무효화 + 시스템 사용자 자산 액세스 제거 + Meta 로그인 활동 점검 + 광고 계정 청구 내역 점검
+7. **MCP 코드는 토큰을 로깅하지 않음** — 로그 출력 시 자동 마스킹 (`EAA**********`)
 
 ---
 
@@ -177,6 +219,18 @@ LLM이 이 메시지를 그대로 사용자에게 전달 가능.
 ### 8-1. `광고지표` (모든 광고 객체 공통)
 
 ```python
+from decimal import Decimal
+
+class 구매성과_엔트리(BaseModel):
+    """1개 (어트리뷰션 윈도우 × 구매 유형) 조합의 성과 — Meta는 매트릭스로 반환.
+    스칼라로 평탄화하면 어떤 윈도우/유형의 ROAS인지 정보 손실됨."""
+    어트리뷰션윈도우: str            # "1d_click", "7d_click", "1d_view", "dda" 등
+    구매유형: str                    # "omni_purchase", "purchase", "fb_pixel_purchase", "app_purchase" 등
+    구매수: int
+    구매가치: Decimal                # 계정 통화 단위 (account_currency 메타와 함께 해석)
+    구매당비용: Decimal              # CPA (이 윈도우/구매유형 기준)
+    ROAS: float                      # 구매가치 ÷ 지출액
+
 class 광고지표(BaseModel):
     # 식별자
     플랫폼: Literal["meta", "naver", "kakao", "google", "tiktok"]
@@ -199,22 +253,26 @@ class 광고지표(BaseModel):
     CTR: float
     고유CTR: float | None
 
-    # 비용
-    CPC: float
-    CPM: float
-    지출액: int                      # 원
+    # 비용 — Meta는 spend를 string decimal로 반환. KRW 가정 금지
+    CPC: Decimal
+    CPM: Decimal
+    지출액: Decimal                  # 계정 통화 (메타의 계정통화 필드와 함께 해석)
 
     # 커머스 깔때기 (있을 때만)
     상품조회수: int | None           # omni_view_content
     장바구니수: int | None           # omni_add_to_cart
     결제시작수: int | None           # omni_initiated_checkout
-    구매수: int | None               # omni_purchase
-    구매가치: int | None             # 원
     랜딩뷰수: int | None             # landing_page_view (클릭 → 랜딩 손실 진단)
 
-    # 핵심 지표
-    ROAS: float | None
-    CPA: float | None
+    # 핵심 지표 — 기본 어트리뷰션 윈도우 × 기본 구매유형 기준 편의 스칼라
+    # 어떤 윈도우·유형이 기본인지는 응답 메타(기본_어트리뷰션윈도우, 기본_구매유형) 참조
+    구매수: int | None               # 기본 윈도우/유형 기준
+    구매가치: Decimal | None         # 기본 윈도우/유형 기준 (계정 통화)
+    ROAS: float | None               # 기본 윈도우/유형 기준
+    CPA: Decimal | None              # 기본 윈도우/유형 기준
+
+    # 전체 윈도우 × 구매유형 매트릭스 — 사용자가 "1일 클릭 ROAS 알려줘" 같은 질문 가능
+    구매성과_매트릭스: list[구매성과_엔트리] | None
 
     # 진단 신호 (Ad 레벨에서만)
     광고품질순위: str | None         # ABOVE_AVERAGE / AVERAGE / BELOW_AVERAGE_{35,20,10} / UNKNOWN
@@ -223,7 +281,10 @@ class 광고지표(BaseModel):
     추정광고회상률: float | None     # estimated_ad_recall_rate
 
     # 응답 메타 (매우 중요 — LLM이 답할 때 출처 표기)
-    어트리뷰션윈도우: list[str]      # 예: ["1d_click", "7d_click"]
+    계정통화: str                    # ISO 4217 코드. 예: "KRW", "USD". 모든 통화 단위 해석 기준
+    요청_어트리뷰션윈도우: list[str] # 도구 호출 시 사용자가 요청한 윈도우. 예: ["1d_click", "7d_click"]
+    기본_어트리뷰션윈도우: str        # 편의 스칼라(ROAS·CPA·구매수·구매가치) 계산에 쓰인 윈도우
+    기본_구매유형: str                # 편의 스칼라 계산에 쓰인 action_type. 기본 "omni_purchase"
     플랫폼별_원본: dict              # 플랫폼 고유 필드 보존
 ```
 
@@ -242,13 +303,14 @@ class 동영상광고지표(광고지표):
     동영상_100퍼_완주수: int
 
     # 파생 지표 (LLM이 명세서로 산식 확인 가능)
+    # ※ Python 식별자는 숫자 시작 불가 → "이탈률_3초", "도달률_25퍼" 형태 (의미상 한글 어순으로도 자연)
     플레이레이트: float                  # 재생수 / 노출수 × 100
     훅레이트: float                      # 3초 조회수 / 노출수 × 100
     홀드레이트: float                    # 15초 조회수 / 3초 조회수 × 100
-    3초_이탈률: float                    # 100 - 훅레이트
-    25퍼_도달률: float
-    50퍼_도달률: float
-    75퍼_도달률: float
+    이탈률_3초: float                    # 100 - 훅레이트
+    도달률_25퍼: float
+    도달률_50퍼: float
+    도달률_75퍼: float
     완주율: float                        # 100퍼 완주수 / 노출수 × 100
     시청완료율: float                    # 100퍼 완주수 / 재생수 × 100
     THRUPLAY율: float                    # THRUPLAY수 / 노출수 × 100
@@ -256,7 +318,7 @@ class 동영상광고지표(광고지표):
     # 시청 시간
     동영상_평균_시청시간_초: float
     THRUPLAY수: int                      # video_thruplay_watched_actions
-    THRUPLAY당_비용: int                 # 원
+    THRUPLAY당_비용: Decimal             # 계정 통화 (계정통화 메타와 함께 해석)
 
     # 곡선 (선택적, 도구가 요청 시만 채움)
     시청곡선: list[int] | None           # video_play_curve_actions (1초 단위 0-60s)
@@ -385,9 +447,10 @@ def get_data_spec() -> dict:
     이 MCP가 다루는 모든 데이터의 명세서를 반환합니다 — 필드 정의, 산식, 한국어 매핑, 사용 가능 breakdown 조합 등.
 
     호출해야 하는 경우:
-    - 사용자가 첫 인사를 한 후 LLM이 자동 호출 (세션 컨텍스트 확보용)
-    - 사용자가 "어떤 데이터가 있어?" "ROAS가 뭐야?" "훅레이트는 어떻게 계산해?" 등을 물을 때
-    - LLM이 다른 도구를 호출하기 전, 적합한 필드명을 확인하고 싶을 때
+    - 사용자가 "어떤 데이터가 있어?" "이 MCP 뭐 할 수 있어?" "ROAS가 뭐야?" "훅레이트는 어떻게 계산해?" 등을 물을 때
+    - LLM이 다른 도구를 호출하기 전, 적합한 필드명·산식·breakdown 조합을 확인하고 싶을 때
+    - 사용자 질문이 모호해서 어떤 도구를 써야 할지 판단 어려울 때 (예: "광고 분석해줘")
+    ※ MCP에는 "첫 턴 자동 호출" 라이프사이클 훅이 없음. LLM이 필요하다고 판단 시 호출하도록 docstring과 영상 가이드로 유도하는 것이 한계.
 
     호출하지 말아야 하는 경우:
     - 단순 한국어 마케팅 용어 정의는 → get_korean_glossary 사용
@@ -411,11 +474,13 @@ def get_data_spec() -> dict:
 
 ## 10. 운영 가드 (구현 시 강제)
 
-### 10-1. Breakdown 화이트리스트
+### 10-1. Breakdown 화이트리스트 (metric-aware)
 
-Meta가 invalid 조합을 silent로 막거나 잘못된 결과를 줌. MCP는 사전 정의된 안전 조합만 노출.
+Meta가 invalid 조합을 silent로 막거나 잘못된 결과를 주므로 MCP는 사전 정의된 안전 조합만 노출.
+**중요**: 글로벌 화이트리스트만으로는 부족. 일부 metric은 특정 breakdown과 호환 안 됨 → metric × breakdown 매트릭스로 검증.
 
 ```python
+# 1. 안전 조합 후보 (조합 자체가 일반적으로 가능)
 SAFE_BREAKDOWN_COMBOS = [
     [],
     ["age"],
@@ -423,6 +488,7 @@ SAFE_BREAKDOWN_COMBOS = [
     ["age", "gender"],
     ["country"],
     ["region"],
+    ["dma"],
     ["device_platform"],
     ["publisher_platform"],
     ["platform_position"],
@@ -430,25 +496,104 @@ SAFE_BREAKDOWN_COMBOS = [
     ["impression_device"],
     ["hourly_stats_aggregated_by_advertiser_time_zone"],
 ]
-# 도구가 위 리스트 외 조합을 받으면 KoreanError 반환
+
+# 2. metric별 비호환 breakdown — 이 metric을 요청할 때 이 breakdown은 차단
+INCOMPATIBLE_BREAKDOWNS_BY_METRIC: dict[str, set[str]] = {
+    # 비디오 % watched 시리즈는 region 미지원 (research §3.5)
+    "video_p25_watched_actions":  {"region"},
+    "video_p50_watched_actions":  {"region"},
+    "video_p75_watched_actions":  {"region"},
+    "video_p95_watched_actions":  {"region"},
+    "video_p100_watched_actions": {"region"},
+    # THRUPLAY와 ad_recall은 dma 미지원
+    "video_thruplay_watched_actions": {"dma"},
+    "estimated_ad_recall_rate":       {"dma"},
+    # 진단 신호 3종은 일부 breakdown에서만 의미 있음 — POC 후 보강
+    # "quality_ranking": {...},
+}
+
+def validate_request(metrics: list[str], breakdowns: list[str]) -> None:
+    if breakdowns not in SAFE_BREAKDOWN_COMBOS:
+        raise KoreanError(f"breakdown 조합 {breakdowns}은 화이트리스트에 없음. 사용 가능: ...")
+    for m in metrics:
+        bad = INCOMPATIBLE_BREAKDOWNS_BY_METRIC.get(m, set()) & set(breakdowns)
+        if bad:
+            raise KoreanError(f"metric '{m}'은 breakdown {bad}와 호환 안 됨. 분리 호출 권장.")
 ```
+
+LLM에게 노출되는 도구 인자는 항상 위 validator를 통과해야 함. POC 단계(§9)에서 추가 비호환 조합을 발견하면 매핑 테이블 보강.
 
 ### 10-2. Async 자동 전환
 
+응답 크기는 기간·광고 수뿐 아니라 breakdown 수, time_increment, action 필드 수에도 의존하므로 cost 추정 함수로 판단:
+
 ```python
-def should_use_async(time_range_days: int, ad_count: int) -> bool:
-    return time_range_days >= 30 or ad_count >= 500
+def estimated_response_cost(
+    time_range_days: int,
+    ad_count: int,
+    breakdown_count: int,
+    has_hourly: bool,
+    action_field_count: int,
+    attribution_window_count: int,
+) -> int:
+    base = time_range_days * max(ad_count, 1)
+    multiplier = 1
+    multiplier *= max(1, breakdown_count) ** 1.5     # breakdown은 cardinality 폭발
+    multiplier *= 24 if has_hourly else 1
+    multiplier *= max(1, action_field_count) * max(1, attribution_window_count)
+    return int(base * multiplier)
+
+def should_use_async(estimated_cost: int) -> bool:
+    return estimated_cost >= 50_000  # 경험적 임계값, POC 후 보정
 ```
 
-대용량 호출은 자동으로 `POST /insights` async 모드 + `report_run_id` polling.
+`should_use_async` True면 자동으로 `POST /insights` async 모드 + `report_run_id` polling.
 
-### 10-3. Rate Limit 가드
+### 10-3. Rate Limit 가드 (티어 인지 + 멀티 BUC)
 
-- `X-Business-Use-Case-Usage` 헤더 파싱
-- `call_count`, `total_cputime`, `total_time` 중 가장 높은 값 기준
-- 80% 도달: 요청 throttle (지연)
-- 100% 도달: exponential backoff (5s → 30s → 5min)
-- 503/429 응답: 자동 재시도 최대 3회
+#### 티어 기본값
+
+```python
+# 환경변수로 티어 명시 (자동 탐지 어려움)
+META_APP_TIER = env("META_APP_TIER", default="dev")  # "dev" | "standard"
+
+HOURLY_BUDGET = {
+    "dev":      300    + 40 * active_ads_count,   # research §7.1
+    "standard": 100000 + 40 * active_ads_count,
+}[META_APP_TIER]
+```
+
+App Review를 거치지 않으면 **Dev Tier**가 기본 — 베이스 300/시간. 사용자가 Standard로 승격됐으면 명시.
+
+#### BUC 헤더 멀티 버킷 파싱
+
+`X-Business-Use-Case-Usage` 헤더는 광고 계정 ID별로 여러 BUC 버킷의 사용률을 반환:
+
+```python
+import json
+
+def parse_buc_header(header_value: str, account_id: str) -> dict[str, int]:
+    """
+    헤더 형식 예:
+    {"act_xxx": [
+        {"type": "ads_management",  "call_count": 23, "total_cputime": 12, "total_time": 4},
+        {"type": "ads_insights",    "call_count": 67, "total_cputime": 89, "total_time": 33},
+        {"type": "custom_audience", "call_count": 5,  "total_cputime": 2,  "total_time": 1}
+    ]}
+    각 값은 0-100 (%).
+    """
+    data = json.loads(header_value).get(account_id, [])
+    # 모든 BUC 버킷의 모든 메트릭 중 최댓값 — 어느 버킷이든 100% 가까우면 위험
+    return {bucket["type"]: max(bucket["call_count"], bucket["total_cputime"], bucket["total_time"])
+            for bucket in data}
+```
+
+#### Throttle 정책
+
+- 가장 높은 BUC 버킷 사용률 기준
+- 80% 도달: 다음 호출까지 지연 (linear backoff)
+- 100% 도달 또는 429/503: exponential backoff (5s → 30s → 5min, 최대 3회 재시도)
+- 모든 버킷별로 별도 추적 (한 버킷이 100%라도 다른 버킷은 호출 허용 가능)
 
 ### 10-4. Deprecated 필드 차단
 
@@ -642,20 +787,38 @@ P0 시나리오에 필요한 도구 우선:
 
 - 언어: Python 3.11+
 - V1 플랫폼: Meta only (FB/IG)
-- 인증: System User Token
+- 인증: System User Token + 다단계 헬스 체크 (`/me` + `/me/adaccounts` + 실 Insights probe)
 - Read-only
-- 도구 18개
-- 한국어 통합 스키마
+- 한국어 통합 스키마 (`광고지표`·`동영상광고지표`·`구매성과_엔트리`)
 - 백엔드 없음 (stdio 전용)
 - 페르소나 미고정
 - V1 수익화 안 함
+- 통화: `Decimal` + ISO 4217 `계정통화` 메타. KRW 가정 금지
+- ROAS·CPA: 편의 스칼라 + 전체 윈도우×구매유형 매트릭스 동시 보존
+- CSV 출력: **UTF-8 BOM 포함** (한국어 Excel 호환). V1 acceptance criterion
+- Rate limit 가드: Dev Tier 기본 (`META_APP_TIER` env로 Standard 승격)
+- BUC 헤더: 멀티 버킷 파싱 (ads_management, ads_insights, custom_audience 별 추적)
+- Breakdown 검증: 글로벌 화이트리스트 + metric별 비호환 매핑 (metric-aware)
 
 ### 18-2. 보류 / 추후 결정 (Open Questions)
 
 - TypeScript 포팅 여부 (사용자 요청 시)
-- 한국어 글꼴 처리 (CSV 출력 시 BOM 추가 여부 — Excel 한글 깨짐 방지)
 - Telemetry/사용 통계 수집 여부 (현재 안 함, 향후 옵트인 검토 가능)
 - 다중 광고 계정 동시 처리 시 토큰 vs 계정ID 분리 (V2에서 검토)
+- **도구 18개 vs 축소 (8~10개)** — Auth POC 결과로 결정. 현재는 18개 유지하되 Codex 리뷰 §M4 라우팅 위험 인지
+- **Multi-provider 아키텍처 V1 포함 여부** — Codex 리뷰 §N3 YAGNI 지적. POC 후 Meta single-provider로 축소 가능
+- **§3·§7 인증/온보딩 클레임 ("5분 영상")** — Auth POC 결과로 정직하게 다시 쓸 예정
+
+### 18-3. Codex Adversarial Review 후 결정 (POC 후 확정)
+
+다음 항목들은 [Codex 리뷰 보고서](./2026-04-26-codex-adversarial-review.md)와 [Auth POC 체크리스트](../../auth-poc-checklist.md) 결과로 최종 확정:
+
+- App Review 회피 가능 여부 (Dev Tier 충분 vs Standard 필요)
+- 무기한 토큰 발급 가능성 (모든 계정 vs 인증된 비즈니스만)
+- 영상 1편 vs 다편 분할 (5분 가능 vs 10분 이상)
+- 진단 신호(quality_ranking 등) 실제 enum 값
+- `video_p95_watched_actions` 실존 여부
+- `video_continuous_2_sec_watched_actions`가 한국어 UI "3초 조회"의 product-equivalent 여부
 
 ---
 
@@ -673,4 +836,38 @@ P0 시나리오에 필요한 도구 우선:
 
 ## 20. 다음 단계
 
-본 스펙에 대한 사용자 검토 후, `superpowers:writing-plans` 스킬로 마일스톤별 구현 계획 수립.
+1. **Auth POC 실행** ([체크리스트](../../auth-poc-checklist.md)) — 사용자가 직접 Meta Business Manager에서 토큰 발급·Insights API 호출까지 끝-끝 검증
+2. **POC 결과로 §3·§7 정직하게 재서술** — "5분 영상으로 누구나" 클레임의 현실적 표현
+3. **스코프 결정** — 도구 18→10 축소 여부, multi-provider 아키텍처 V1 포함 여부
+4. **스펙 v2 작성 + 셀프 리뷰 + Codex adversarial 재리뷰**
+5. Codex block 풀리면 → `superpowers:writing-plans` 스킬로 마일스톤별 구현 계획 수립
+
+---
+
+## 21. 변경 이력
+
+### 2026-04-26 (v1.1) — Codex Adversarial Review 1차 반영
+
+[Codex 리뷰 보고서](./2026-04-26-codex-adversarial-review.md)의 deterministic 픽스 11건 반영. POC 의존 항목(C1·C2·C3·M9·N3·도구 축소)은 §18-2/§18-3에 분리 보관.
+
+| # | Codex 항목 | 변경 |
+|---|-----------|------|
+| 1 | C4 | `3초_이탈률`/`25퍼·50퍼·75퍼_도달률` → `이탈률_3초`/`도달률_25퍼·50퍼·75퍼` (Python 식별자 SyntaxError 회피). 추가로 `1차_*` 메타 필드를 `기본_*`로 |
+| 2 | C5 | `ROAS: float` → `구매성과_엔트리` 매트릭스 + 편의 스칼라 분리. 어트리뷰션 윈도우 × 구매유형 정보 보존 |
+| 3 | C6 | `/me` 단일 검증 → 3단계 헬스 체크(`/me` + `/me/adaccounts` + 실 Insights probe) |
+| 4 | C7 | `SAFE_BREAKDOWN_COMBOS` 글로벌 화이트리스트 → `INCOMPATIBLE_BREAKDOWNS_BY_METRIC` 추가로 metric-aware |
+| 5 | C8 | `get_data_spec` "첫 턴 자동 호출" 클레임 제거. MCP 라이프사이클 한계 명시 |
+| 6 | M1 | Rate limit 가드 Dev Tier 기본 (`300 + 40×ads`). `META_APP_TIER` env로 Standard 승격 |
+| 7 | M2 | `X-Business-Use-Case-Usage` 멀티 버킷 파싱 (ads_management/ads_insights/custom_audience) |
+| 8 | M5 | 토큰 보안 가이드 §7-4 신규 (파일 권한·자산 최소화·권한 최소화·유출 시 절차) |
+| 9 | M6 | 모든 통화 필드 `int 원` → `Decimal` + `계정통화: str` (ISO 4217). KRW 가정 제거 |
+| 10 | M7 | `should_use_async`를 days/ad_count 단순 임계 → breakdown·hourly·action 필드 cost 추정 함수로 |
+| 11 | N1·N2 | 영상 개수 7편 → 8편 정정. CSV BOM open question → V1 confirmed (UTF-8 BOM 포함) |
+
+**아직 미해결 (POC 후 확정)**:
+
+- C1·C2·C3 (인증 약속 정확성) — POC 결과로 §3·§7 정직 재서술
+- M3 (`video_continuous_2_sec_watched_actions`가 한국어 "3초 조회" equivalent 검증) — POC §6
+- M4 (15개 도구 docstring 미작성) — 스코프 축소 결정 후 작성
+- M8·M9 (테스트 자동화·5주 일정) — 스코프 축소 결정에 의존
+- N3·N4 (multi-provider YAGNI) — V1에서 제거 vs 유지 결정 보류
