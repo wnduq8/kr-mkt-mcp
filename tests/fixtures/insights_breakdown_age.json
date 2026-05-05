@@ -1,0 +1,6 @@
+{
+  "data": [
+    {"campaign_id": "c1", "age": "25-34", "spend": "20000", "impressions": "50000", "purchase_roas": [{"value": "3.5"}]},
+    {"campaign_id": "c1", "age": "35-44", "spend": "25000", "impressions": "70000", "purchase_roas": [{"value": "2.9"}]}
+  ]
+}

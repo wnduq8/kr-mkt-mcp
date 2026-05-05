@@ -1,0 +1,23 @@
+{
+  "data": [
+    {
+      "campaign_id": "c1",
+      "campaign_name": "봄세일",
+      "spend": "45000",
+      "impressions": "120000",
+      "clicks": "1500",
+      "ctr": "1.25",
+      "cpc": "30",
+      "cpm": "375",
+      "frequency": "1.8",
+      "reach": "66000",
+      "purchase_roas": [{"action_type": "omni_purchase", "value": "3.2"}],
+      "actions": [
+        {"action_type": "purchase", "value": "12"},
+        {"action_type": "page_view", "value": "200"}
+      ],
+      "date_start": "2026-04-28",
+      "date_stop": "2026-05-04"
+    }
+  ]
+}
