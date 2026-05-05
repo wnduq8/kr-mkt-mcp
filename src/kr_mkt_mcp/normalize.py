@@ -21,6 +21,16 @@ _ACTION_TYPE_BY_FLAT_METRIC = {
     "page_views": "page_view",
 }
 
+# action_values 분해 시 사용할 value 키 매핑 — 영어식 단수화 일괄 규칙은 깨지므로 명시
+_VALUE_KEY_BY_FLAT_METRIC = {
+    "purchases": "purchase_value",
+    "leads": "lead_value",
+    "registrations": "registration_value",
+    "add_to_carts": "add_to_cart_value",
+    "checkouts_initiated": "checkout_value",
+    "page_views": "page_view_value",
+}
+
 
 def parse_metric_value(value: Any) -> Any:
     """숫자처럼 보이는 string을 int/float로 변환. 그 외엔 원본 그대로."""
@@ -66,9 +76,18 @@ def flatten_insights(
 
     - 숫자 string → number
     - actions[]에서 평탄 메트릭(purchases, leads 등) 추출
+    - action_values[]에서 value 메트릭(purchase_value 등) 추출
     - purchase_roas list → scalar
     - 식별 필드(campaign_id/campaign_name/adset_id/.../date_start/date_stop) 유지
     - breakdown 필드(age/gender 등) 그대로 유지
+
+    requested_metrics 동작:
+        - actions[] / action_values[] 분해 시 어떤 flat 메트릭을 추출할지 필터.
+          예: requested_metrics=["purchases"]면 actions에서 purchase만 추출.
+        - 일반 필드(spend, ctr 등)와 purchase_roas는 항상 포함 — Meta API 호출 시
+          fields 파라미터로 이미 통제됐다는 가정.
+        - None이면 _ACTION_TYPE_BY_FLAT_METRIC / _VALUE_KEY_BY_FLAT_METRIC의 모든
+          매핑을 추출.
     """
     out: list[dict] = []
     for raw in raw_rows:
@@ -85,9 +104,9 @@ def flatten_insights(
                 flat["purchase_roas"] = _flatten_purchase_roas(v)
                 continue
             if k == "action_values":
-                # purchase_value 등 평탄화 — actions와 동일 패턴
+                # purchase_value 등 평탄화 — _VALUE_KEY_BY_FLAT_METRIC로 키 명시
                 for flat_name, action_type in _ACTION_TYPE_BY_FLAT_METRIC.items():
-                    target_key = f"{flat_name.removesuffix('s')}_value"
+                    target_key = _VALUE_KEY_BY_FLAT_METRIC[flat_name]
                     if requested_metrics is None or target_key in requested_metrics:
                         flat[target_key] = extract_action_value(v, action_type)
                 continue

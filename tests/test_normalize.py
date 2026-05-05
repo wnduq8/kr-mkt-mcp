@@ -59,3 +59,32 @@ def test_flatten_insights_with_breakdown():
     assert {r["age"] for r in rows} == {"25-34", "35-44"}
     assert rows[0]["spend"] == 20000
     assert rows[0]["purchase_roas"] == 3.5
+
+
+def test_flatten_insights_action_values_keys():
+    """action_values의 평탄 키 매핑 (checkouts_initiated→checkout_value 정합)."""
+    raw = [
+        {
+            "campaign_id": "c1",
+            "spend": "1000",
+            "action_values": [
+                {"action_type": "purchase", "value": "50000"},
+                {"action_type": "initiate_checkout", "value": "70000"},
+                {"action_type": "lead", "value": "5000"},
+            ],
+        }
+    ]
+    rows = flatten_insights(raw, requested_metrics=["purchase_value", "checkout_value"])
+    assert rows[0]["purchase_value"] == 50000
+    assert rows[0]["checkout_value"] == 70000
+    assert "lead_value" not in rows[0]
+
+
+def test_flatten_insights_no_requested_metrics_includes_all_action_keys():
+    """requested_metrics=None이면 모든 action 매핑 키 포함."""
+    raw = [{"actions": [{"action_type": "purchase", "value": "12"}]}]
+    rows = flatten_insights(raw, requested_metrics=None)
+    for k in ("purchases", "leads", "registrations", "add_to_carts", "checkouts_initiated", "page_views"):
+        assert k in rows[0]
+    assert rows[0]["purchases"] == 12
+    assert rows[0]["leads"] == 0
