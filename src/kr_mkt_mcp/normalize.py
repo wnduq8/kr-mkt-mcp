@@ -32,6 +32,31 @@ _VALUE_KEY_BY_FLAT_METRIC = {
 }
 
 
+def to_api_fields(metric_fields: list[str]) -> list[str]:
+    """우리가 쓰는 flat metric 이름 → Meta API 실 필드 이름으로 번역.
+
+    purchases/leads 등 → actions
+    purchase_value/lead_value 등 → action_values
+    그 외(impressions/spend/purchase_roas 등) → 그대로
+    중복 제거 + 순서 유지.
+    """
+    flat_action_names = set(_ACTION_TYPE_BY_FLAT_METRIC.keys())
+    flat_value_names = set(_VALUE_KEY_BY_FLAT_METRIC.values())
+    out: list[str] = []
+    seen: set[str] = set()
+    for m in metric_fields:
+        if m in flat_action_names:
+            translated = "actions"
+        elif m in flat_value_names:
+            translated = "action_values"
+        else:
+            translated = m
+        if translated not in seen:
+            out.append(translated)
+            seen.add(translated)
+    return out
+
+
 def parse_metric_value(value: Any) -> Any:
     """숫자처럼 보이는 string을 int/float로 변환. 그 외엔 원본 그대로."""
     if value is None or not isinstance(value, str):

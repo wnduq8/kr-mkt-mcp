@@ -20,7 +20,7 @@ from kr_mkt_mcp.config import (
 )
 from kr_mkt_mcp.dates import resolve_date_range
 from kr_mkt_mcp.meta_client import MetaClient
-from kr_mkt_mcp.normalize import flatten_insights
+from kr_mkt_mcp.normalize import flatten_insights, to_api_fields
 
 # level별 추가 식별 필드 (응답에 같이 받아오는 게 AI 분석에 유리)
 _LEVEL_ID_FIELDS = {
@@ -56,7 +56,9 @@ def _build_insights_params(
     id_fields: tuple[str, ...],
     date_range: dict[str, str],
 ) -> dict[str, str]:
-    fields = ",".join(list(id_fields) + metric_fields)
+    # 우리의 flat 이름(purchases 등)을 Meta API가 이해하는 actions/action_values로 번역
+    api_fields = to_api_fields(metric_fields)
+    fields = ",".join(list(id_fields) + api_fields)
     return {
         "level": level,
         "fields": fields,
