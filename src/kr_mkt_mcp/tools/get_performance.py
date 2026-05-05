@@ -88,6 +88,10 @@ async def get_performance(
         today=today,
     )
 
+    # sort_by가 metrics에 없으면 자동 포함 — 정렬 기준이 응답에 있어야 하므로
+    if sort_by and sort_by not in metric_fields:
+        metric_fields = metric_fields + [sort_by]
+
     params = _build_insights_params(
         level=level,
         metric_fields=metric_fields,
@@ -100,6 +104,14 @@ async def get_performance(
     rows, page_meta = await client.get_paginated(f"/{acc}/insights", params=params)
     flat = flatten_insights(rows, requested_metrics=metric_fields)
 
+    flat = _apply_top_n(
+        rows=flat,
+        breakdown=breakdown,
+        top_n=top_n,
+        sort_by=sort_by or "spend",
+        level=level,
+    )
+
     meta = {
         **page_meta,
         "level": level,
@@ -109,3 +121,50 @@ async def get_performance(
         "breakdown": breakdown,
     }
     return {"data": flat, "meta": meta}
+
+
+def _sort_key(row: dict, key: str) -> float:
+    v = row.get(key)
+    if v is None:
+        return 0.0
+    if isinstance(v, (int, float)):
+        return float(v)
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _apply_top_n(
+    *,
+    rows: list[dict],
+    breakdown: str | None,
+    top_n: int | None,
+    sort_by: str,
+    level: str,
+) -> list[dict]:
+    """top_n 적용.
+
+    - breakdown 없음: 단순 sort + slice
+    - breakdown 있음: level별 entity(예: campaign_id)로 그룹화 → 그룹 합계 sort_by 기준 상위 top_n entity 선택 → 그 entity의 모든 breakdown 행 반환
+    """
+    if not top_n:
+        return rows
+
+    if not breakdown:
+        return sorted(rows, key=lambda r: _sort_key(r, sort_by), reverse=True)[:top_n]
+
+    # breakdown 있음: entity 기준 그룹화
+    entity_field = _LEVEL_ID_FIELDS[level][0]  # campaign_id, adset_id, ad_id 등
+    by_entity: dict[str, list[dict]] = {}
+    totals: dict[str, float] = {}
+    for r in rows:
+        eid = r.get(entity_field)
+        if eid is None:
+            continue
+        by_entity.setdefault(eid, []).append(r)
+        totals[eid] = totals.get(eid, 0) + (_sort_key(r, sort_by) or 0)
+
+    top_entities = sorted(totals.items(), key=lambda kv: kv[1], reverse=True)[:top_n]
+    top_ids = {eid for eid, _ in top_entities}
+    return [r for r in rows if r.get(entity_field) in top_ids]

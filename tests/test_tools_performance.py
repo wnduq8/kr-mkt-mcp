@@ -120,3 +120,96 @@ async def test_get_performance_since_until_overrides_preset(cfg, httpx_mock):
     request_url = str(requests[-1].url)
     assert "2026-03-01" in request_url
     assert "2026-03-15" in request_url
+
+
+@pytest.mark.asyncio
+async def test_get_performance_breakdown_returns_per_value_rows(cfg, httpx_mock):
+    httpx_mock.add_response(
+        url=re.compile(r".*insights.*"),
+        json=load("insights_breakdown_age.json"),
+    )
+    client = MetaClient(cfg)
+    result = await get_performance(
+        client,
+        account_id="act_111",
+        level="campaign",
+        breakdown="age",
+        today=date(2026, 5, 5),
+    )
+    rows = result["data"]
+    assert len(rows) == 2
+    assert {r["age"] for r in rows} == {"25-34", "35-44"}
+    assert result["meta"]["breakdown"] == "age"
+
+
+@pytest.mark.asyncio
+async def test_get_performance_breakdown_top_n_filters_to_top_campaigns(cfg, httpx_mock):
+    """breakdown 사용 시 top_n=2이고 응답에 캠페인 c1/c2/c3가 있으면 sort_by 기준 상위 2개 캠페인의 행만 반환."""
+    raw = {
+        "data": [
+            {"campaign_id": "c1", "age": "25-34", "spend": "20000"},
+            {"campaign_id": "c1", "age": "35-44", "spend": "25000"},
+            {"campaign_id": "c2", "age": "25-34", "spend": "10000"},
+            {"campaign_id": "c2", "age": "35-44", "spend": "15000"},
+            {"campaign_id": "c3", "age": "25-34", "spend": "5000"},
+            {"campaign_id": "c3", "age": "35-44", "spend": "8000"},
+        ]
+    }
+    httpx_mock.add_response(url=re.compile(r".*insights.*"), json=raw)
+    client = MetaClient(cfg)
+    result = await get_performance(
+        client,
+        account_id="act_111",
+        level="campaign",
+        breakdown="age",
+        top_n=2,
+        today=date(2026, 5, 5),
+    )
+    rows = result["data"]
+    campaign_ids = {r["campaign_id"] for r in rows}
+    # c1, c2 합계 spend가 c3보다 크므로 상위 2개로 필터됨
+    assert campaign_ids == {"c1", "c2"}
+    assert len(rows) == 4  # 2 캠페인 × 2 연령대
+
+
+@pytest.mark.asyncio
+async def test_get_performance_sort_by_ctr_overrides_default(cfg, httpx_mock):
+    raw = {
+        "data": [
+            {"campaign_id": "c1", "age": "25-34", "spend": "100000", "ctr": "0.5"},
+            {"campaign_id": "c2", "age": "25-34", "spend": "10000", "ctr": "3.0"},
+        ]
+    }
+    httpx_mock.add_response(url=re.compile(r".*insights.*"), json=raw)
+    client = MetaClient(cfg)
+    result = await get_performance(
+        client,
+        account_id="act_111",
+        level="campaign",
+        breakdown="age",
+        top_n=1,
+        sort_by="ctr",
+        today=date(2026, 5, 5),
+    )
+    # CTR 기준 top1은 c2
+    assert {r["campaign_id"] for r in result["data"]} == {"c2"}
+
+
+@pytest.mark.asyncio
+async def test_get_performance_no_breakdown_top_n_clips_rows(cfg, httpx_mock):
+    raw = {
+        "data": [
+            {"campaign_id": f"c{i}", "spend": str(1000 - i * 50)} for i in range(20)
+        ]
+    }
+    httpx_mock.add_response(url=re.compile(r".*insights.*"), json=raw)
+    client = MetaClient(cfg)
+    result = await get_performance(
+        client,
+        account_id="act_111",
+        level="campaign",
+        top_n=5,
+        today=date(2026, 5, 5),
+    )
+    assert len(result["data"]) == 5
+    assert result["data"][0]["campaign_id"] == "c0"  # spend 가장 높음
