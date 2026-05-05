@@ -81,7 +81,7 @@ async def test_get_performance_tier_all_includes_video_metrics(cfg, httpx_mock):
     )
     requests = httpx_mock.get_requests()
     request_url = str(requests[-1].url)
-    assert "video_3_sec_watched_actions" in request_url
+    assert "video_30_sec_watched_actions" in request_url
     assert "quality_ranking" in request_url
 
 

@@ -20,12 +20,13 @@ METRIC_ALIAS_TABLE: dict[str, list[str]] = {
     "ctr": ["CTR", "클릭률"],
     "purchase_roas": ["ROAS", "광고비 대비 구매 수익", "구매 ROAS"],
     "purchases": ["구매수", "전환수", "구매 건수"],
-    # tier=all 추가 일부
-    "video_3_sec_watched_actions": ["영상 3초 재생", "동영상 3초 시청"],
+    # tier=all 추가 일부 (Meta API v25 기준)
+    "video_30_sec_watched_actions": ["영상 30초 재생", "동영상 30초 시청"],
     "video_thruplay_watched_actions": ["완전 시청 (ThruPlay)"],
     "quality_ranking": ["품질 순위"],
     "engagement_rate_ranking": ["참여율 순위"],
     "outbound_clicks": ["외부 링크 클릭"],
+    "inline_link_clicks": ["인라인 링크 클릭", "링크 클릭"],
     "landing_page_views": ["랜딩페이지 방문"],
 }
 

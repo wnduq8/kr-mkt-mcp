@@ -23,13 +23,16 @@ TIER1_METRICS: tuple[str, ...] = (
     "purchases",  # actions 중 purchase 평탄화
 )
 
-# tier="all" 풀 필드셋 — Meta API에서 의미 있는 추가 메트릭
+# tier="all" 풀 필드셋 — Meta Marketing API v25 valid 필드만
+# - landing_page_views는 actions[landing_page_view]에서 추출 (normalize.py 매핑)
+# - link_clicks는 inline_link_clicks로 (Meta v25 rename)
+# - video_3_sec_watched_actions는 v25 deprecated → video_30_sec_watched_actions로
 TIER_ALL_EXTRA_METRICS: tuple[str, ...] = (
     "actions",
     "action_values",
     "cost_per_action_type",
     "video_play_actions",
-    "video_3_sec_watched_actions",
+    "video_30_sec_watched_actions",
     "video_thruplay_watched_actions",
     "video_avg_time_watched_actions",
     "video_p25_watched_actions",
@@ -40,8 +43,11 @@ TIER_ALL_EXTRA_METRICS: tuple[str, ...] = (
     "engagement_rate_ranking",
     "conversion_rate_ranking",
     "outbound_clicks",
-    "link_clicks",
-    "landing_page_views",
+    "outbound_clicks_ctr",
+    "inline_link_clicks",
+    "cost_per_inline_link_click",
+    "cost_per_outbound_click",
+    "cost_per_thruplay",
 )
 
 # 어트리뷰션 윈도우 디폴트 — Meta 표준

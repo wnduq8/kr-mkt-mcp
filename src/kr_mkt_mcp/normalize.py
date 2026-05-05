@@ -19,6 +19,7 @@ _ACTION_TYPE_BY_FLAT_METRIC = {
     "add_to_carts": "add_to_cart",
     "checkouts_initiated": "initiate_checkout",
     "page_views": "page_view",
+    "landing_page_views": "landing_page_view",  # Meta v25에서 top-level 필드 deprecated, actions에서 추출
 }
 
 # action_values 분해 시 사용할 value 키 매핑 — 영어식 단수화 일괄 규칙은 깨지므로 명시
@@ -29,6 +30,7 @@ _VALUE_KEY_BY_FLAT_METRIC = {
     "add_to_carts": "add_to_cart_value",
     "checkouts_initiated": "checkout_value",
     "page_views": "page_view_value",
+    "landing_page_views": "landing_page_view_value",
 }
 
 
