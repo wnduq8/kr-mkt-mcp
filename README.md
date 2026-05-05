@@ -524,7 +524,7 @@ src/kr_mkt_mcp/
 
 ### 기여
 
-PR 환영. 단 V1 sticky 결정 사항(`docs/superpowers/plans/2026-05-05-kr-mkt-mcp-v1.md` 참고)은 변경 시 plan 갱신 필요.
+PR 환영. V1 sticky 결정 사항(read-only/Meta only/6 도구 등)을 변경하려면 issue 먼저 열어 논의해주세요.
 
 ---
 
