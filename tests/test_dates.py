@@ -50,3 +50,25 @@ def test_unknown_preset_raises():
 def test_only_since_raises():
     with pytest.raises(ValueError, match="since/until은 함께 지정"):
         resolve_date_range(date_preset=None, since="2026-04-01", until=None)
+
+
+def test_this_month_at_month_start_no_inversion():
+    """today가 월 1일이면 since(=today)가 yesterday보다 미래라 inversion 발생.
+    fallback으로 since=until=yesterday(전월 말일)."""
+    result = resolve_date_range(
+        date_preset="this_month",
+        since=None,
+        until=None,
+        today=date(2026, 5, 1),
+    )
+    assert result == {"since": "2026-04-30", "until": "2026-04-30"}
+
+
+def test_last_14d():
+    result = resolve_date_range(
+        date_preset="last_14d",
+        since=None,
+        until=None,
+        today=date(2026, 5, 5),
+    )
+    assert result == {"since": "2026-04-21", "until": "2026-05-04"}

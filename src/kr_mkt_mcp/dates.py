@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+from kr_mkt_mcp.config import DATE_PRESET_DEFAULT
+
 
 def _today() -> date:
     return date.today()
@@ -36,17 +38,23 @@ def resolve_date_range(
     yesterday = today - timedelta(days=1)
 
     if date_preset is None:
-        date_preset = "last_7d"  # config.DATE_PRESET_DEFAULT — 순환 import 회피해 인라인
+        date_preset = DATE_PRESET_DEFAULT
 
+    until_iso = yesterday.isoformat()
     if date_preset == "yesterday":
-        return {"since": yesterday.isoformat(), "until": yesterday.isoformat()}
+        return {"since": until_iso, "until": until_iso}
     if date_preset == "last_7d":
-        return {"since": (yesterday - timedelta(days=6)).isoformat(), "until": yesterday.isoformat()}
+        return {"since": (yesterday - timedelta(days=6)).isoformat(), "until": until_iso}
     if date_preset == "last_14d":
-        return {"since": (yesterday - timedelta(days=13)).isoformat(), "until": yesterday.isoformat()}
+        return {"since": (yesterday - timedelta(days=13)).isoformat(), "until": until_iso}
     if date_preset == "last_30d":
-        return {"since": (yesterday - timedelta(days=29)).isoformat(), "until": yesterday.isoformat()}
+        return {"since": (yesterday - timedelta(days=29)).isoformat(), "until": until_iso}
     if date_preset == "this_month":
-        return {"since": today.replace(day=1).isoformat(), "until": yesterday.isoformat()}
+        # 오늘이 1일이면 since(=today)가 yesterday보다 미래 → since/until inversion 방지.
+        # 월초엔 since=until=yesterday(전월 말일)로 fallback.
+        since_dt = today.replace(day=1)
+        if since_dt > yesterday:
+            since_dt = yesterday
+        return {"since": since_dt.isoformat(), "until": until_iso}
 
     raise ValueError(f"알 수 없는 date_preset: {date_preset}")
