@@ -7,13 +7,13 @@ from kr_mkt_mcp.tools.call_meta_api import call_meta_api
 
 @pytest.fixture
 def cfg(fake_token) -> Config:
-    return Config(access_token=fake_token, api_version="v21.0", base_url="https://graph.facebook.com")
+    return Config(access_token=fake_token, api_version="v25.0", base_url="https://graph.facebook.com")
 
 
 @pytest.mark.asyncio
 async def test_call_meta_api_returns_raw(cfg, httpx_mock):
     httpx_mock.add_response(
-        url="https://graph.facebook.com/v21.0/me?fields=id,name",
+        url="https://graph.facebook.com/v25.0/me?fields=id,name",
         json={"id": "user_1", "name": "테스터"},
     )
     client = MetaClient(cfg)

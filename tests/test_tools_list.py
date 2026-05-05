@@ -16,7 +16,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 @pytest.fixture
 def cfg(fake_token) -> Config:
-    return Config(access_token=fake_token, api_version="v21.0", base_url="https://graph.facebook.com")
+    return Config(access_token=fake_token, api_version="v25.0", base_url="https://graph.facebook.com")
 
 
 def load(name: str) -> dict:
@@ -26,7 +26,7 @@ def load(name: str) -> dict:
 @pytest.mark.asyncio
 async def test_list_ad_accounts_returns_normalized(cfg, httpx_mock):
     httpx_mock.add_response(
-        url="https://graph.facebook.com/v21.0/me/adaccounts?fields=id,account_id,name,currency,account_status,business,timezone_name",
+        url="https://graph.facebook.com/v25.0/me/adaccounts?fields=id,account_id,name,currency,account_status,business,timezone_name",
         json=load("ad_accounts.json"),
     )
     client = MetaClient(cfg)
@@ -45,7 +45,7 @@ async def test_list_ad_accounts_returns_normalized(cfg, httpx_mock):
 @pytest.mark.asyncio
 async def test_list_campaigns_default_filter_active(cfg, httpx_mock):
     httpx_mock.add_response(
-        url=re.compile(r"https://graph\.facebook\.com/v21\.0/act_111/campaigns"),
+        url=re.compile(r"https://graph\.facebook\.com/v25\.0/act_111/campaigns"),
         json=load("campaigns.json"),
     )
     client = MetaClient(cfg)
@@ -60,7 +60,7 @@ async def test_list_campaigns_default_filter_active(cfg, httpx_mock):
 @pytest.mark.asyncio
 async def test_list_campaigns_status_override(cfg, httpx_mock):
     httpx_mock.add_response(
-        url=re.compile(r"https://graph\.facebook\.com/v21\.0/act_111/campaigns"),
+        url=re.compile(r"https://graph\.facebook\.com/v25\.0/act_111/campaigns"),
         json=load("campaigns.json"),
     )
     client = MetaClient(cfg)
@@ -73,7 +73,7 @@ async def test_list_campaigns_status_override(cfg, httpx_mock):
 @pytest.mark.asyncio
 async def test_list_ads_with_campaign_filter(cfg, httpx_mock):
     httpx_mock.add_response(
-        url=re.compile(r"https://graph\.facebook\.com/v21\.0/act_111/ads"),
+        url=re.compile(r"https://graph\.facebook\.com/v25\.0/act_111/ads"),
         json=load("ads.json"),
     )
     client = MetaClient(cfg)

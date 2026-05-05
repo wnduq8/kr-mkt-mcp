@@ -143,7 +143,7 @@ DESCRIPTION_CALL_META_API = f"""Meta Graph API의 임의 GET endpoint를 직접 
 
 주의:
 - HTTP GET만 가능. POST/PUT/DELETE/PATCH 시도 자체 차단됨.
-- API 버전이 endpoint에 명시되지 않으면 MCP의 디폴트 v21.0 prefix 사용. /v22.0/... 식으로 직접 명시 가능.
+- API 버전이 endpoint에 명시되지 않으면 MCP의 디폴트 v25.0 prefix 사용. /v22.0/... 식으로 직접 명시 가능.
 
 {_READONLY_NOTE}
 """

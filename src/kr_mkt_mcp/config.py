@@ -94,6 +94,6 @@ def load_config() -> Config:
             "META_ACCESS_TOKEN 환경 변수가 필요합니다. "
             "MCP 호스트의 mcp config JSON `env` 필드 또는 .env 파일에 설정하세요."
         )
-    api_version = os.environ.get("META_API_VERSION", "v21.0")
+    api_version = os.environ.get("META_API_VERSION", "v25.0")
     base_url = os.environ.get("META_GRAPH_BASE_URL", "https://graph.facebook.com")
     return Config(access_token=token, api_version=api_version, base_url=base_url)

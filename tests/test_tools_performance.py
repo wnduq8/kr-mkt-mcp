@@ -15,7 +15,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 @pytest.fixture
 def cfg(fake_token) -> Config:
-    return Config(access_token=fake_token, api_version="v21.0", base_url="https://graph.facebook.com")
+    return Config(access_token=fake_token, api_version="v25.0", base_url="https://graph.facebook.com")
 
 
 def load(name: str) -> dict:
@@ -25,7 +25,7 @@ def load(name: str) -> dict:
 @pytest.mark.asyncio
 async def test_get_performance_default_tier1_campaign_level(cfg, httpx_mock):
     httpx_mock.add_response(
-        url=re.compile(r".*v21\.0/act_111/insights.*"),
+        url=re.compile(r".*v25\.0/act_111/insights.*"),
         json=load("insights_campaign_tier1.json"),
     )
     client = MetaClient(cfg)
@@ -88,7 +88,7 @@ async def test_get_performance_tier_all_includes_video_metrics(cfg, httpx_mock):
 @pytest.mark.asyncio
 async def test_get_performance_account_level(cfg, httpx_mock):
     httpx_mock.add_response(
-        url=re.compile(r".*v21\.0/act_111/insights.*"),
+        url=re.compile(r".*v25\.0/act_111/insights.*"),
         json={"data": [{"account_id": "111", "spend": "100000", "purchase_roas": [{"value": "2.5"}]}]},
     )
     client = MetaClient(cfg)

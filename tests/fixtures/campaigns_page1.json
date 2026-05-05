@@ -5,6 +5,6 @@
   ],
   "paging": {
     "cursors": {"before": "B1", "after": "A1"},
-    "next": "https://graph.facebook.com/v21.0/act_123/campaigns?after=A1"
+    "next": "https://graph.facebook.com/v25.0/act_123/campaigns?after=A1"
   }
 }

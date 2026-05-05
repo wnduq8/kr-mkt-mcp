@@ -14,7 +14,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 @pytest.fixture
 def cfg(fake_token) -> Config:
-    return Config(access_token=fake_token, api_version="v21.0", base_url="https://graph.facebook.com")
+    return Config(access_token=fake_token, api_version="v25.0", base_url="https://graph.facebook.com")
 
 
 def load(name: str) -> dict:
@@ -24,11 +24,11 @@ def load(name: str) -> dict:
 @pytest.mark.asyncio
 async def test_creative_image(cfg, httpx_mock):
     httpx_mock.add_response(
-        url=re.compile(r".*v21\.0/ad1\?.*"),
+        url=re.compile(r".*v25\.0/ad1\?.*"),
         json={"id": "ad1", "name": "ad1 name", "creative": {"id": "cr1"}},
     )
     httpx_mock.add_response(
-        url=re.compile(r".*v21\.0/cr1\?.*"),
+        url=re.compile(r".*v25\.0/cr1\?.*"),
         json=load("creative_image.json"),
     )
     client = MetaClient(cfg)
@@ -46,11 +46,11 @@ async def test_creative_image(cfg, httpx_mock):
 @pytest.mark.asyncio
 async def test_creative_video(cfg, httpx_mock):
     httpx_mock.add_response(
-        url=re.compile(r".*v21\.0/ad2\?.*"),
+        url=re.compile(r".*v25\.0/ad2\?.*"),
         json={"id": "ad2", "creative": {"id": "cr2"}},
     )
     httpx_mock.add_response(
-        url=re.compile(r".*v21\.0/cr2\?.*"),
+        url=re.compile(r".*v25\.0/cr2\?.*"),
         json=load("creative_video.json"),
     )
     client = MetaClient(cfg)
@@ -64,11 +64,11 @@ async def test_creative_video(cfg, httpx_mock):
 @pytest.mark.asyncio
 async def test_creative_carousel(cfg, httpx_mock):
     httpx_mock.add_response(
-        url=re.compile(r".*v21\.0/ad3\?.*"),
+        url=re.compile(r".*v25\.0/ad3\?.*"),
         json={"id": "ad3", "creative": {"id": "cr3"}},
     )
     httpx_mock.add_response(
-        url=re.compile(r".*v21\.0/cr3\?.*"),
+        url=re.compile(r".*v25\.0/cr3\?.*"),
         json=load("creative_carousel.json"),
     )
     client = MetaClient(cfg)

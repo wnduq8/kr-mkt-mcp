@@ -7,7 +7,7 @@ from kr_mkt_mcp.config import Config, load_config
 def test_load_config_from_env(env_with_token, fake_token):
     cfg = load_config()
     assert cfg.access_token == fake_token
-    assert cfg.api_version == "v21.0"
+    assert cfg.api_version == "v25.0"
 
 
 def test_load_config_missing_token(monkeypatch):

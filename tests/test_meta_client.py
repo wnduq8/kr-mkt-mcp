@@ -13,7 +13,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 @pytest.fixture
 def cfg(fake_token) -> Config:
-    return Config(access_token=fake_token, api_version="v21.0", base_url="https://graph.facebook.com")
+    return Config(access_token=fake_token, api_version="v25.0", base_url="https://graph.facebook.com")
 
 
 def load_fixture(name: str) -> dict:
@@ -23,12 +23,12 @@ def load_fixture(name: str) -> dict:
 @pytest.mark.asyncio
 async def test_get_single_page(cfg, httpx_mock):
     httpx_mock.add_response(
-        url="https://graph.facebook.com/v21.0/act_123/campaigns?fields=id,name,status",
+        url="https://graph.facebook.com/v25.0/act_123/campaigns?fields=id,name,status",
         json=load_fixture("campaigns_page1.json"),
     )
     # campaigns_page1.json has paging.next → follow-through page returns no more data
     httpx_mock.add_response(
-        url="https://graph.facebook.com/v21.0/act_123/campaigns?after=A1",
+        url="https://graph.facebook.com/v25.0/act_123/campaigns?after=A1",
         json={"data": [], "paging": {}},
     )
     client = MetaClient(cfg)
@@ -41,11 +41,11 @@ async def test_get_single_page(cfg, httpx_mock):
 @pytest.mark.asyncio
 async def test_get_auto_paginate_until_done(cfg, httpx_mock):
     httpx_mock.add_response(
-        url="https://graph.facebook.com/v21.0/act_123/campaigns?fields=id",
+        url="https://graph.facebook.com/v25.0/act_123/campaigns?fields=id",
         json=load_fixture("campaigns_page1.json"),
     )
     httpx_mock.add_response(
-        url="https://graph.facebook.com/v21.0/act_123/campaigns?after=A1",
+        url="https://graph.facebook.com/v25.0/act_123/campaigns?after=A1",
         json=load_fixture("campaigns_page2.json"),
     )
     client = MetaClient(cfg)
@@ -58,7 +58,7 @@ async def test_get_auto_paginate_until_done(cfg, httpx_mock):
 async def test_get_truncates_at_hard_cap(cfg, httpx_mock, monkeypatch):
     monkeypatch.setattr("kr_mkt_mcp.config.PAGINATION_HARD_CAP", 2)
     httpx_mock.add_response(
-        url="https://graph.facebook.com/v21.0/act_123/campaigns",
+        url="https://graph.facebook.com/v25.0/act_123/campaigns",
         json=load_fixture("campaigns_page1.json"),  # 2 rows, paging.next 있음
     )
     client = MetaClient(cfg)
@@ -73,7 +73,7 @@ async def test_no_false_positive_truncated_when_exact_cap(cfg, httpx_mock, monke
     """cap과 동일한 row 수 + paging.next 없으면 truncated=False."""
     monkeypatch.setattr("kr_mkt_mcp.config.PAGINATION_HARD_CAP", 2)
     httpx_mock.add_response(
-        url="https://graph.facebook.com/v21.0/act_123/campaigns",
+        url="https://graph.facebook.com/v25.0/act_123/campaigns",
         json={"data": [{"id": "c1"}, {"id": "c2"}], "paging": {}},
     )
     client = MetaClient(cfg)
@@ -85,7 +85,7 @@ async def test_no_false_positive_truncated_when_exact_cap(cfg, httpx_mock, monke
 @pytest.mark.asyncio
 async def test_call_endpoint_raw(cfg, httpx_mock):
     httpx_mock.add_response(
-        url="https://graph.facebook.com/v21.0/me",
+        url="https://graph.facebook.com/v25.0/me",
         json={"id": "user_1", "name": "Tester"},
     )
     client = MetaClient(cfg)
