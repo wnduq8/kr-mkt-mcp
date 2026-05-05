@@ -12,6 +12,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 import httpx
 
 from kr_mkt_mcp import config as _config
+from kr_mkt_mcp.api_usage import summarize_usage
 from kr_mkt_mcp.config import Config
 
 # Meta API 버전 prefix 정규식 — endpoint 시작이 /v숫자.숫자/ 면 사용자 override
@@ -50,6 +51,12 @@ class MetaClient:
     def __init__(self, cfg: Config, *, http_client: httpx.AsyncClient | None = None):
         self._cfg = cfg
         self._http = http_client or httpx.AsyncClient(timeout=30.0)
+        self._last_usage: dict | None = None  # 가장 최근 응답의 X-*-Usage 헤더 요약
+
+    @property
+    def last_usage(self) -> dict | None:
+        """가장 최근 Meta API 응답의 사용량 헤더 요약 (없으면 None)."""
+        return self._last_usage
 
     def _build_url(self, endpoint: str) -> str:
         if _VERSION_PREFIX_RE.match(endpoint):
@@ -72,6 +79,7 @@ class MetaClient:
         url = self._build_url(endpoint)
         resp = await self._http.get(url, params=params if params else None, headers=self._headers())
         resp.raise_for_status()
+        self._last_usage = summarize_usage(resp.headers)
         return resp.json()
 
     async def get_paginated(
@@ -93,6 +101,7 @@ class MetaClient:
         while url:
             resp = await self._http.get(url, params=params if params else None, headers=self._headers())
             resp.raise_for_status()
+            self._last_usage = summarize_usage(resp.headers)  # 매 페이지마다 갱신
             body = resp.json()
             pages += 1
             rows.extend(body.get("data", []))
@@ -114,6 +123,7 @@ class MetaClient:
             "truncated": truncated,
             "hard_cap": _config.PAGINATION_HARD_CAP,
             "pages_fetched": pages,
+            "api_usage": self._last_usage,  # Meta API 부하 모니터링 (None이면 헤더 정보 없음)
         }
 
     async def aclose(self) -> None:

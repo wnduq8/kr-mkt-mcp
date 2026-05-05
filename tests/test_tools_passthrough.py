@@ -18,7 +18,11 @@ async def test_call_meta_api_returns_raw(cfg, httpx_mock):
     )
     client = MetaClient(cfg)
     result = await call_meta_api(client, endpoint="/me", params={"fields": "id,name"})
-    assert result == {"id": "user_1", "name": "테스터"}
+    # 응답은 {"data": <원본>, "meta": {"api_usage": ...}} 형태로 wrapping됨
+    assert result["data"] == {"id": "user_1", "name": "테스터"}
+    assert "api_usage" in result["meta"]
+    # mock 응답에 X-*-Usage 헤더 없으므로 None
+    assert result["meta"]["api_usage"] is None
 
 
 @pytest.mark.asyncio
@@ -29,7 +33,26 @@ async def test_call_meta_api_endpoint_with_explicit_version(cfg, httpx_mock):
     )
     client = MetaClient(cfg)
     result = await call_meta_api(client, endpoint="/v22.0/me", params=None)
-    assert result == {"id": "user_2"}
+    assert result["data"] == {"id": "user_2"}
+
+
+@pytest.mark.asyncio
+async def test_call_meta_api_includes_api_usage_when_headers_present(cfg, httpx_mock):
+    httpx_mock.add_response(
+        url="https://graph.facebook.com/v25.0/me",
+        json={"id": "user"},
+        headers={
+            "X-App-Usage": '{"call_count": 28, "total_cputime": 25, "total_time": 25}',
+            "X-Ad-Account-Usage": '{"acc_id_util_pct": 9.85}',
+        },
+    )
+    client = MetaClient(cfg)
+    result = await call_meta_api(client, endpoint="/me", params=None)
+    usage = result["meta"]["api_usage"]
+    assert usage is not None
+    assert usage["max_pct"] == 28.0
+    assert usage["warning_level"] == "ok"
+    assert "█" in usage["gauge"]
 
 
 @pytest.mark.parametrize(

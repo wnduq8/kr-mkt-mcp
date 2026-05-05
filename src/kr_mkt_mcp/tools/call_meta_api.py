@@ -56,7 +56,11 @@ async def call_meta_api(
     endpoint: str,
     params: dict[str, Any] | None,
 ) -> dict:
-    """raw GET. Meta Graph API 응답 본문을 그대로 반환."""
+    """raw GET. 반환: {"data": <Meta 원본 응답>, "meta": {"api_usage": ...}}.
+
+    api_usage가 있으면 meta에 포함, 없으면 None. data는 Meta 응답 그대로.
+    """
     _validate_endpoint(endpoint)
     _validate_params(params)
-    return await client.call_endpoint(endpoint, params=params)
+    raw = await client.call_endpoint(endpoint, params=params)
+    return {"data": raw, "meta": {"api_usage": client.last_usage}}
