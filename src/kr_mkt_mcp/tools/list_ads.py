@@ -2,6 +2,8 @@
 """account 단위 광고(ad) 목록. campaign_id로 필터 가능. 메트릭 X."""
 from __future__ import annotations
 
+import json
+
 from kr_mkt_mcp.meta_client import MetaClient
 
 _FIELDS = "id,name,status,effective_status,campaign_id,adset_id,creative"
@@ -17,9 +19,11 @@ async def list_ads(
     acc = account_id if account_id.startswith("act_") else f"act_{account_id}"
     params: dict[str, object] = {"fields": _FIELDS}
     if status:
-        params["effective_status"] = f'["{status}"]'
+        params["effective_status"] = json.dumps([status])
     if campaign_id:
-        params["filtering"] = f'[{{"field":"campaign.id","operator":"IN","value":["{campaign_id}"]}}]'
+        params["filtering"] = json.dumps(
+            [{"field": "campaign.id", "operator": "IN", "value": [campaign_id]}]
+        )
     rows, meta = await client.get_paginated(f"/{acc}/ads", params=params)
     normalized = [
         {

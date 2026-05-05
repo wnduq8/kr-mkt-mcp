@@ -2,6 +2,8 @@
 """account 단위 캠페인 목록 (메타데이터만, 메트릭 X)."""
 from __future__ import annotations
 
+import json
+
 from kr_mkt_mcp.meta_client import MetaClient
 from kr_mkt_mcp.normalize import parse_metric_value
 
@@ -23,7 +25,7 @@ async def list_campaigns(
     acc = account_id if account_id.startswith("act_") else f"act_{account_id}"
     params: dict[str, object] = {"fields": _FIELDS}
     if status:
-        params["effective_status"] = f'["{status}"]'
+        params["effective_status"] = json.dumps([status])
     rows, meta = await client.get_paginated(f"/{acc}/campaigns", params=params)
     normalized = [
         {
