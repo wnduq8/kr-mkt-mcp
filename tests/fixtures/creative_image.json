@@ -1,0 +1,13 @@
+{
+  "id": "cr1",
+  "name": "봄세일 단일 이미지",
+  "object_type": "SHARE",
+  "thumbnail_url": "https://scontent.cdninstagram.com/thumb1.jpg",
+  "image_url": "https://scontent.cdninstagram.com/full1.jpg",
+  "title": "봄세일 시작! 최대 50% OFF",
+  "body": "지금 바로 둘러보세요. 한정 수량.",
+  "call_to_action_type": "SHOP_NOW",
+  "object_url": "https://shop.example.com/spring",
+  "link_url": "https://shop.example.com/spring",
+  "effective_object_story_id": "page_1_post_1"
+}

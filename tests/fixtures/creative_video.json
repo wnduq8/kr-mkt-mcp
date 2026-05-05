@@ -1,0 +1,10 @@
+{
+  "id": "cr2",
+  "name": "봄세일 동영상",
+  "object_type": "VIDEO",
+  "thumbnail_url": "https://scontent.cdninstagram.com/vthumb.jpg",
+  "video_id": "v123",
+  "title": "지금이 기회",
+  "body": "30초 영상으로 만나는 봄세일.",
+  "call_to_action_type": "WATCH_MORE"
+}

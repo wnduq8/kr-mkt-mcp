@@ -1,0 +1,13 @@
+{
+  "id": "cr3",
+  "name": "봄세일 캐러셀",
+  "object_type": "SHARE",
+  "object_story_spec": {
+    "link_data": {
+      "child_attachments": [
+        {"image_url": "https://cdn/c1.jpg", "name": "원피스", "description": "봄 신상", "link": "https://shop/p1", "call_to_action": {"type": "SHOP_NOW"}},
+        {"image_url": "https://cdn/c2.jpg", "name": "블라우스", "description": "데일리룩", "link": "https://shop/p2", "call_to_action": {"type": "SHOP_NOW"}}
+      ]
+    }
+  }
+}
