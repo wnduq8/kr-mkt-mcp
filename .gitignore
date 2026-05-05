@@ -17,3 +17,7 @@ uv.lock
 # IDE
 .vscode/
 .idea/
+
+# 내부 기획·계획 산출물 (공개 레포에는 미포함)
+.ouroboros/
+docs/
