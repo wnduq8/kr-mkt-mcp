@@ -41,6 +41,8 @@ pip install -e ".[dev]"
 
 > 보안 노트: 본 MCP 서버는 read-only로 동작하지만 토큰 자체에 추가 권한을 부여하면 다른 도구·코드가 그 권한을 쓸 수 있습니다. `ads_read`만 발급해서 위험을 원천 차단하세요.
 
+> Meta API 버전 노트: 디폴트 버전은 `v21.0`. Meta가 새 버전을 deprecate하면 `META_API_VERSION=v22.0` env 추가로 override 가능. 또는 `call_meta_api`의 `endpoint`에 `/v22.0/...` 형식으로 직접 명시.
+
 ## Claude Desktop 연결
 
 Claude Desktop의 mcp config(`claude_desktop_config.json`)에 다음 항목 추가:
