@@ -53,10 +53,12 @@ METRIC_ALIAS_TABLE: dict[str, list[str]] = {
 
 _READONLY_NOTE = "이 MCP 서버는 read-only — 광고를 변경하거나 일시중지하는 등의 쓰기 작업은 절대 불가능합니다. Meta Ads Manager에서 직접 작업하라고 안내하세요."
 
-_USAGE_NOTE = """응답 meta.api_usage 활용 (Meta API 부하 모니터링):
-- max_pct + warning_level(ok/medium/high/critical) + gauge bar 포함
-- warning_level이 medium 이상이면 사용자에게 gauge bar와 warning_message 함께 노출
-- ads_api_access_tier가 'development_access'면 시간당 한도가 매우 낮음 (Standard Access 신청 권장)"""
+_USAGE_NOTE = """응답 meta.api_usage 활용 (정보 표시 전용 — 호출 차단 X):
+- max_pct + warning_level(ok/medium/high/critical) + gauge bar + summary_ko 포함
+- 사용자가 한도 상황을 파악할 수 있도록 노출만 하는 용도. **AI는 사용량을 이유로 도구 호출을 막거나 재시도를 거부하지 말 것.** 호출이 실제 Meta 한도 초과로 실패하면 그 때 check_api_health 도구로 상태 확인하라고 사용자에게 안내.
+- summary_ko 라인들을 사용자에게 그대로 보여주면 충분.
+- 호출 실패 후에도 last_usage 헤더는 capture되므로 check_api_health로 사후 확인 가능.
+- ads_api_access_tier가 'development_access'면 시간당 한도 낮음 — Standard Access 신청 안내."""
 
 
 DESCRIPTION_LIST_AD_ACCOUNTS = f"""사용자의 META_ACCESS_TOKEN으로 접근 가능한 모든 Meta 광고 계정 목록을 조회합니다.

@@ -98,10 +98,11 @@ def format_gauge(pct: float, *, width: int = 20) -> str:
     return f"{bar} {pct:.1f}%"
 
 
+# 임계값별 정보성 메시지 — 호출을 막거나 차단하지 않음. 단순 안내.
 _THRESHOLDS = (
-    (90.0, "critical", "🔴 위험: API 한도 90% 초과 — 호출 즉시 중단 권장"),
-    (75.0, "high", "🟠 주의: API 한도 75% 초과 — 호출 빈도 줄이기"),
-    (50.0, "medium", "🟡 알림: API 한도 50% 초과 — 모니터링 필요"),
+    (90.0, "critical", "🔴 한도 거의 도달 (90%+) — Meta가 곧 호출을 거부할 수 있습니다"),
+    (75.0, "high", "🟠 한도 75% 초과 — 일부 호출이 실패할 가능성"),
+    (50.0, "medium", "🟡 한도 50% 초과 — 사용량 모니터링 가능"),
 )
 
 
@@ -206,15 +207,16 @@ def _build_friendly_summary(parsed: dict, max_pct: float, level: str) -> list[st
 
 
 def _recommend_action(level: str, tier: str | None) -> str:
+    """정보성 안내 — 호출을 막지 않음. 사용자가 상황 파악할 수 있도록 설명만 제공."""
     base_map = {
-        "ok": "현재 정상 — 추가 조치 불필요",
-        "medium": "호출 빈도 모니터링 권장",
-        "high": "호출 빈도 줄이기 — 잠시 대기 후 재시도",
-        "critical": "즉시 호출 중단 — Meta API rate limit 도달 임박",
+        "ok": "현재 정상 — 자유롭게 호출 가능",
+        "medium": "한도 모니터링 가능 — 호출은 그대로 진행됨",
+        "high": "한도가 높은 상태 — 일부 호출이 Meta에서 거부될 수 있음 (도구 자체는 호출 시도)",
+        "critical": "한도 도달 임박 — Meta가 일시적으로 호출을 거부할 수 있음 (호출 실패 시 잠시 대기 후 재시도)",
     }
     base = base_map.get(level, base_map["ok"])
     if tier == "development_access":
-        base += ". 현재 Development Access 등급이라 시간당 한도가 매우 낮음 — Standard Access 신청 시 한도 대폭 상향"
+        base += ". 현재 Development Access 등급은 시간당 한도가 매우 낮음 — Standard Access 신청하면 한도 대폭 상향"
     return base
 
 

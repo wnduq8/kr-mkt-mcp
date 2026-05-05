@@ -75,11 +75,16 @@ class MetaClient:
         endpoint: str,
         params: dict[str, Any] | None,
     ) -> dict:
-        """raw GET — `call_meta_api` 도구에서 사용. 응답 본문 그대로 반환."""
+        """raw GET — `call_meta_api` 도구에서 사용. 응답 본문 그대로 반환.
+
+        4xx/5xx여도 응답 헤더의 사용량 정보는 _last_usage에 capture —
+        사용자가 호출 실패 후 check_api_health로 한도 상태 확인 가능.
+        """
         url = self._build_url(endpoint)
         resp = await self._http.get(url, params=params if params else None, headers=self._headers())
-        resp.raise_for_status()
+        # 4xx/5xx여도 헤더는 capture (한도 초과 응답에서도 사용량 정보 포함됨)
         self._last_usage = summarize_usage(resp.headers)
+        resp.raise_for_status()
         return resp.json()
 
     async def get_paginated(
@@ -100,8 +105,9 @@ class MetaClient:
 
         while url:
             resp = await self._http.get(url, params=params if params else None, headers=self._headers())
+            # 4xx/5xx여도 헤더는 capture (사용자가 실패 원인 확인 가능하도록)
+            self._last_usage = summarize_usage(resp.headers)
             resp.raise_for_status()
-            self._last_usage = summarize_usage(resp.headers)  # 매 페이지마다 갱신
             body = resp.json()
             pages += 1
             rows.extend(body.get("data", []))
