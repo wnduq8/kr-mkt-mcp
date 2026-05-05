@@ -72,26 +72,92 @@ def test_parse_usage_headers_dict():
         "X-Ad-Account-Usage": '{"acc_id_util_pct": 10.5}',
     }
     parsed = parse_usage_headers(h)
-    assert parsed["app"] == {"call_count": 50, "total_cputime": 30, "total_time": 25}
-    assert parsed["ad_account"] == {"acc_id_util_pct": 10.5}
-    assert parsed["business_use_case"] is None
+    assert parsed["app_usage"] == {"call_count": 50, "total_cputime": 30, "total_time": 25}
+    assert parsed["ad_account_usage"] == {"acc_id_util_pct": 10.5}
+    assert parsed["business_use_case_usage"] is None
+    assert parsed["insights_throttle"] is None
 
 
 def test_parse_usage_headers_case_insensitive():
     h = {"x-app-usage": '{"call_count": 5}'}
     parsed = parse_usage_headers(h)
-    assert parsed["app"] == {"call_count": 5}
+    assert parsed["app_usage"] == {"call_count": 5}
 
 
 def test_parse_usage_headers_missing_returns_none():
     parsed = parse_usage_headers({})
-    assert parsed == {"app": None, "ad_account": None, "business_use_case": None}
+    assert parsed == {
+        "app_usage": None,
+        "ad_account_usage": None,
+        "business_use_case_usage": None,
+        "insights_throttle": None,
+    }
 
 
 def test_parse_usage_headers_invalid_json_ignored():
     h = {"X-App-Usage": "not valid json"}
     parsed = parse_usage_headers(h)
-    assert parsed["app"] is None
+    assert parsed["app_usage"] is None
+
+
+def test_parse_insights_throttle_header():
+    """X-FB-Ads-Insights-Throttle 헤더 — insights 호출 시에만 옴."""
+    h = {
+        "X-FB-Ads-Insights-Throttle": '{"app_id_util_pct": 0.01, "acc_id_util_pct": 5.5, "ads_api_access_tier": "development_access"}'
+    }
+    parsed = parse_usage_headers(h)
+    assert parsed["insights_throttle"]["app_id_util_pct"] == 0.01
+    assert parsed["insights_throttle"]["acc_id_util_pct"] == 5.5
+    assert parsed["insights_throttle"]["ads_api_access_tier"] == "development_access"
+
+
+def test_summarize_includes_korean_summary():
+    h = {
+        "X-Business-Use-Case-Usage": json.dumps({
+            "634718569695860": [
+                {
+                    "type": "ads_insights",
+                    "call_count": 65,
+                    "total_cputime": 30,
+                    "total_time": 30,
+                    "estimated_time_to_regain_access": 0,
+                    "ads_api_access_tier": "development_access",
+                }
+            ]
+        }),
+        "X-FB-Ads-Insights-Throttle": '{"app_id_util_pct": 0.01, "acc_id_util_pct": 0, "ads_api_access_tier": "development_access"}',
+    }
+    result = summarize_usage(h)
+    assert result["max_pct"] == 65.0
+    assert result["warning_level"] == "medium"
+    assert result["access_tier"] == "development_access"
+    assert "개발자 등급" in result["access_tier_ko"]
+    # summary_ko 라인들에 사용자 친화 표현 포함
+    summary_text = "\n".join(result["summary_ko"])
+    assert "광고 분석" in summary_text  # ads_insights → 한국어
+    assert "%" in summary_text
+    assert "권장" in summary_text
+
+
+def test_summarize_critical_level_recommends_immediate_stop():
+    h = {"X-App-Usage": '{"call_count": 95}'}
+    result = summarize_usage(h)
+    assert result["warning_level"] == "critical"
+    summary = "\n".join(result["summary_ko"])
+    assert "중단" in summary or "🔴" in summary
+
+
+def test_summarize_etr_visible_when_blocked():
+    """estimated_time_to_regain_access > 0이면 차단 정보 노출."""
+    h = {
+        "X-Business-Use-Case-Usage": json.dumps({
+            "biz1": [{"type": "ads_management", "call_count": 100, "estimated_time_to_regain_access": 1800}]
+        })
+    }
+    result = summarize_usage(h)
+    summary = "\n".join(result["summary_ko"])
+    assert "1800" in summary
+    assert "차단" in summary or "대기" in summary
 
 
 # ===== summarize_usage =====
