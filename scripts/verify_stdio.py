@@ -36,10 +36,15 @@ async def main() -> int:
         print(f"❌ venv python을 찾을 수 없음: {venv_python}", file=sys.stderr)
         return 1
 
+    src_path = repo_root / "src"
     params = StdioServerParameters(
         command=str(venv_python),
         args=["-m", "kr_mkt_mcp.server"],
-        env={"META_ACCESS_TOKEN": "FAKE_TOKEN_FOR_HANDSHAKE_ONLY"},
+        env={
+            # PYTHONPATH 명시 — editable install 상태 무관하게 src/에서 직접 import.
+            "PYTHONPATH": str(src_path),
+            "META_ACCESS_TOKEN": "FAKE_TOKEN_FOR_HANDSHAKE_ONLY",
+        },
     )
 
     print("⏳ 서버 subprocess 기동 + MCP initialize...")
