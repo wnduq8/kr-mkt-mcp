@@ -1,0 +1,22 @@
+{
+  "data": [
+    {
+      "id": "act_111",
+      "account_id": "111",
+      "name": "메인 쇼핑몰 광고계정",
+      "currency": "KRW",
+      "account_status": 1,
+      "business": {"id": "biz_1", "name": "메인 비즈"},
+      "timezone_name": "Asia/Seoul"
+    },
+    {
+      "id": "act_222",
+      "account_id": "222",
+      "name": "서브 브랜드 광고계정",
+      "currency": "KRW",
+      "account_status": 1,
+      "business": {"id": "biz_1", "name": "메인 비즈"},
+      "timezone_name": "Asia/Seoul"
+    }
+  ]
+}
