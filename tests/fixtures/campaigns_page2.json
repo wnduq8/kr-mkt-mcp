@@ -1,0 +1,6 @@
+{
+  "data": [
+    {"id": "c3", "name": "추석기획", "status": "PAUSED"}
+  ],
+  "paging": {"cursors": {"before": "B2", "after": "A2"}}
+}
