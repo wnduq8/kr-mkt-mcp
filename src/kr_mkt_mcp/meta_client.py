@@ -82,7 +82,7 @@ class MetaClient:
             cap = _config.PAGINATION_HARD_CAP
             if len(rows) >= cap:
                 rows = rows[:cap]
-                truncated = bool(body.get("paging", {}).get("next")) or len(rows) >= cap
+                truncated = bool(body.get("paging", {}).get("next"))
                 break
 
             next_url = body.get("paging", {}).get("next")

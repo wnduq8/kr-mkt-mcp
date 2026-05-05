@@ -69,6 +69,20 @@ async def test_get_truncates_at_hard_cap(cfg, httpx_mock, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_no_false_positive_truncated_when_exact_cap(cfg, httpx_mock, monkeypatch):
+    """cap과 동일한 row 수 + paging.next 없으면 truncated=False."""
+    monkeypatch.setattr("kr_mkt_mcp.config.PAGINATION_HARD_CAP", 2)
+    httpx_mock.add_response(
+        url="https://graph.facebook.com/v21.0/act_123/campaigns",
+        json={"data": [{"id": "c1"}, {"id": "c2"}], "paging": {}},
+    )
+    client = MetaClient(cfg)
+    rows, meta = await client.get_paginated("/act_123/campaigns", params={})
+    assert len(rows) == 2
+    assert meta["truncated"] is False
+
+
+@pytest.mark.asyncio
 async def test_call_endpoint_raw(cfg, httpx_mock):
     httpx_mock.add_response(
         url="https://graph.facebook.com/v21.0/me",
