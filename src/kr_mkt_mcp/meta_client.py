@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import httpx
 
@@ -15,6 +16,23 @@ from kr_mkt_mcp.config import Config
 
 # Meta API 버전 prefix 정규식 — endpoint 시작이 /v숫자.숫자/ 면 사용자 override
 _VERSION_PREFIX_RE = re.compile(r"^/v\d+\.\d+/")
+
+# URL query string에서 절대 노출되면 안 되는 민감 파라미터.
+# Meta paging.next URL에 access_token이 포함될 수 있는데, 우리는 Bearer 헤더로
+# 인증하므로 query에 둘 필요 없고, httpx 에러 메시지가 URL 포함하므로 leak 위험.
+_SENSITIVE_QUERY_PARAMS = {"access_token", "appsecret_proof"}
+
+
+def _strip_sensitive_query_params(url: str) -> str:
+    """URL의 access_token 등 민감 query param 제거."""
+    parsed = urlparse(url)
+    if not parsed.query:
+        return url
+    pairs = [
+        (k, v) for k, v in parse_qsl(parsed.query, keep_blank_values=True)
+        if k.lower() not in _SENSITIVE_QUERY_PARAMS
+    ]
+    return urlunparse(parsed._replace(query=urlencode(pairs)))
 
 
 class ReadOnlyViolation(Exception):
@@ -88,7 +106,8 @@ class MetaClient:
             next_url = body.get("paging", {}).get("next")
             if not next_url:
                 break
-            url = next_url
+            # Meta paging.next URL에서 access_token 제거 — 에러/로그 leak 방지
+            url = _strip_sensitive_query_params(next_url)
             params = None  # next URL에 쿼리 다 포함됨
 
         return rows, {

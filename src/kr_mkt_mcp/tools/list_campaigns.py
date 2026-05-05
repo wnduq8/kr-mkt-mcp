@@ -6,6 +6,7 @@ import json
 
 from kr_mkt_mcp.meta_client import MetaClient
 from kr_mkt_mcp.normalize import parse_metric_value
+from kr_mkt_mcp.validation import validate_id
 
 _FIELDS = "id,name,status,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time"
 
@@ -22,6 +23,7 @@ async def list_campaigns(
         account_id: act_xxx 형식 또는 숫자 ID. act_ prefix 없으면 자동 추가.
         status: effective_status 필터 (디폴트 ACTIVE — "최근 운영 캠페인" 의미). None이면 전체.
     """
+    validate_id(account_id, "account_id")
     acc = account_id if account_id.startswith("act_") else f"act_{account_id}"
     params: dict[str, object] = {"fields": _FIELDS}
     if status:

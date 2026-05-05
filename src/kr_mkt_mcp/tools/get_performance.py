@@ -14,13 +14,22 @@ from datetime import date as _date
 
 from kr_mkt_mcp.config import (
     ATTRIBUTION_WINDOWS_DEFAULT,
+    BREAKDOWNS_ALLOWED,
     DATE_PRESET_DEFAULT,
+    DATE_PRESETS,
+    PAGINATION_HARD_CAP,
     TIER1_METRICS,
     TIER_ALL_EXTRA_METRICS,
 )
 from kr_mkt_mcp.dates import resolve_date_range
 from kr_mkt_mcp.meta_client import MetaClient
 from kr_mkt_mcp.normalize import flatten_insights, to_api_fields
+from kr_mkt_mcp.validation import (
+    validate_field_name,
+    validate_id,
+    validate_in_set,
+    validate_int_range,
+)
 
 # level별 추가 식별 필드 (응답에 같이 받아오는 게 AI 분석에 유리)
 _LEVEL_ID_FIELDS = {
@@ -83,10 +92,21 @@ async def get_performance(
     today: _date | None = None,
 ) -> dict:
     """광고 성과 조회. 응답 = {"data": list[dict], "meta": {...}}."""
-    if level not in {"account", "campaign", "adset", "ad"}:
-        raise ValueError(f"level은 account/campaign/adset/ad 중 하나: {level}")
-    if tier not in {"tier1", "all"}:
-        raise ValueError(f"tier는 tier1/all 중 하나: {tier}")
+    # 입력 검증 — LLM/사용자 prompt injection 차단
+    validate_id(account_id, "account_id")
+    validate_in_set(level, ("account", "campaign", "adset", "ad"), "level")
+    validate_in_set(tier, ("tier1", "all"), "tier")
+    if breakdown is not None:
+        validate_in_set(breakdown, BREAKDOWNS_ALLOWED, "breakdown")
+    if date_preset is not None:
+        validate_in_set(date_preset, DATE_PRESETS, "date_preset")
+    if sort_by is not None:
+        validate_field_name(sort_by, "sort_by")
+    if metrics is not None:
+        for m in metrics:
+            validate_field_name(m, "metrics 항목")
+    if top_n is not None:
+        validate_int_range(top_n, lo=1, hi=PAGINATION_HARD_CAP, name="top_n")
 
     acc = account_id if account_id.startswith("act_") else f"act_{account_id}"
     metric_fields = _resolve_metrics(tier=tier, metrics=metrics)

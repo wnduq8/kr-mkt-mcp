@@ -375,7 +375,7 @@ uvx --refresh --from git+https://github.com/wnduq8/kr-mkt-mcp kr-mkt-mcp --help
 
 이후 Claude Desktop 재시작.
 
-#### 특정 버전 고정
+#### 특정 버전 고정 (보안 권장)
 
 ```json
 "args": [
@@ -385,7 +385,28 @@ uvx --refresh --from git+https://github.com/wnduq8/kr-mkt-mcp kr-mkt-mcp --help
 ]
 ```
 
-`@v0.1.0` 부분을 원하는 git tag 또는 commit SHA로.
+`@v0.1.0` 부분을 원하는 git tag 또는 commit SHA로. main 브랜치 무한 추적 대신 검증된 버전에 고정하면 supply chain 공격(저장소 침해 시 악성 코드 자동 전파) 위험을 차단할 수 있습니다.
+
+---
+
+## 🔒 보안 디자인
+
+본 MCP 서버는 사용자 PC에서 실행되며 외부 서버에 광고 데이터를 송신하지 않습니다. 적용된 보안 layer:
+
+| Layer | 내용 |
+|---|---|
+| **read-only 강제** | `MetaClient`에 POST/PUT/DELETE/PATCH 메서드 자체 미존재. 광고 변경 시도가 코드 레벨에서 불가능. |
+| **HTTP GET only** | 모든 호출은 `httpx.get()`만 사용. `call_meta_api` escape hatch도 동일. |
+| **외부 URL 차단** | `call_meta_api`의 endpoint는 `/`로 시작 graph 경로만 허용. URL 인코딩(`%3F`/`%26`) 우회 차단. |
+| **path traversal 차단** | `account_id`/`campaign_id`/`ad_id`에 `..`, `/`, `\`, `?`, `&`, `#` 등 포함 시 `ValueError`. |
+| **field injection 차단** | `metrics`/`sort_by`/`breakdown`/`date_preset` 모두 `^[a-z][a-z0-9_]*$` 또는 enum 화이트리스트 검증. |
+| **token leak 방지** | Meta `paging.next` URL의 `access_token` query param 자동 제거. Bearer 헤더로만 인증. 에러 메시지/로그에 토큰 노출 X. |
+| **권한 최소화** | Meta API 토큰을 `ads_read` 권한만 발급하도록 README가 안내. |
+| **stdio 격리** | 외부 네트워크 송신 없음 (Meta API 외). 사용자 데이터는 본인 Claude/Codex 호스트로만 흐름. |
+
+자세한 보안 검증 회귀 테스트는 `tests/test_security.py` 참고 (36개 케이스).
+
+취약점 제보: [Issues](https://github.com/wnduq8/kr-mkt-mcp/issues) 또는 비공개로 알리고 싶으면 책임 공개 절차에 따라 직접 연락.
 
 ---
 

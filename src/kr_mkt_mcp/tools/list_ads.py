@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 
 from kr_mkt_mcp.meta_client import MetaClient
+from kr_mkt_mcp.validation import validate_id
+
 
 _FIELDS = "id,name,status,effective_status,campaign_id,adset_id,creative"
 
@@ -16,6 +18,9 @@ async def list_ads(
     campaign_id: str | None = None,
     status: str | None = "ACTIVE",
 ) -> tuple[list[dict], dict]:
+    validate_id(account_id, "account_id")
+    if campaign_id is not None:
+        validate_id(campaign_id, "campaign_id")
     acc = account_id if account_id.startswith("act_") else f"act_{account_id}"
     params: dict[str, object] = {"fields": _FIELDS}
     if status:

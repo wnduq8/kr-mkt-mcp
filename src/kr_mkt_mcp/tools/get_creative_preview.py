@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from kr_mkt_mcp.meta_client import MetaClient
+from kr_mkt_mcp.validation import validate_id
 
 _AD_FIELDS = "id,name,creative"
 _CREATIVE_FIELDS = (
@@ -40,6 +41,7 @@ def _build_carousel_cards(creative: dict) -> list[dict]:
 
 async def get_creative_preview(client: MetaClient, *, ad_id: str) -> dict:
     """ad → creative 두 단계 GET. 응답은 creative_type별 조건부 필드."""
+    validate_id(ad_id, "ad_id")
     ad = await client.call_endpoint(f"/{ad_id}", params={"fields": _AD_FIELDS})
     creative_id = (ad.get("creative") or {}).get("id")
     if not creative_id:

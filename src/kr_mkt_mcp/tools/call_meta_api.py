@@ -4,16 +4,24 @@
 - HTTP method GET만 (MetaClient에 POST 등이 없음)
 - endpoint가 / 로 시작하는 graph 경로만 허용 (외부 URL 차단)
 - // 시작 차단 (경로 traversal 시도)
-- endpoint에 ? 포함 차단 (query string은 params로만 전달)
-- params에 method 키 거부 (POST-as-GET 우회 시도)
+- endpoint에 ? 또는 URL 인코딩(%3F) 포함 차단 (query string은 params로만)
+- params에 method/access_token 등 키 거부 (write 우회 + 토큰 leak 차단)
 """
 from __future__ import annotations
 
+import urllib.parse
 from typing import Any
 
 from kr_mkt_mcp.meta_client import MetaClient
 
-_FORBIDDEN_PARAM_KEYS = {"method", "_method", "http_method"}
+# write 우회 시도 + 토큰 노출 차단
+_FORBIDDEN_PARAM_KEYS = {
+    "method",
+    "_method",
+    "http_method",
+    "access_token",  # Bearer 헤더로 자동 주입되므로 params로 받으면 안 됨 (URL leak 위험)
+    "appsecret_proof",
+}
 
 
 def _validate_endpoint(endpoint: str) -> None:
@@ -23,9 +31,12 @@ def _validate_endpoint(endpoint: str) -> None:
         )
     if endpoint.startswith("//"):
         raise ValueError(f"잘못된 endpoint 형식 ('//'로 시작): {endpoint!r}")
-    if "?" in endpoint or "&" in endpoint:
+    # URL 인코딩(%3F=?, %26=&) 우회 차단 — decode 후 재검사
+    decoded = urllib.parse.unquote(endpoint)
+    if "?" in decoded or "&" in decoded:
         raise ValueError(
-            f"endpoint에 query string을 포함할 수 없습니다. params 인자로 전달하세요. 받은 값: {endpoint!r}"
+            f"endpoint에 query string(?/&)을 포함할 수 없습니다. "
+            f"params 인자로 전달하세요. 받은 값: {endpoint!r}"
         )
 
 
