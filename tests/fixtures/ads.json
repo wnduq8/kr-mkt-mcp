@@ -1,0 +1,13 @@
+{
+  "data": [
+    {
+      "id": "ad1",
+      "name": "봄세일 영상광고 A",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "campaign_id": "c1",
+      "adset_id": "as1",
+      "creative": {"id": "cr1"}
+    }
+  ]
+}

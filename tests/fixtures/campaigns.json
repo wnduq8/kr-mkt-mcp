@@ -1,0 +1,26 @@
+{
+  "data": [
+    {
+      "id": "c1",
+      "name": "봄세일",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "objective": "OUTCOME_SALES",
+      "daily_budget": "50000",
+      "lifetime_budget": null,
+      "start_time": "2026-03-01T00:00:00+0900",
+      "stop_time": null
+    },
+    {
+      "id": "c2",
+      "name": "여름프로모션",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "objective": "OUTCOME_TRAFFIC",
+      "daily_budget": null,
+      "lifetime_budget": "1000000",
+      "start_time": "2026-04-15T00:00:00+0900",
+      "stop_time": "2026-06-15T00:00:00+0900"
+    }
+  ]
+}
