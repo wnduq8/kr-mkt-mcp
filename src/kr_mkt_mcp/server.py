@@ -1,4 +1,4 @@
-"""FastMCP stdio 서버. V1의 6개 도구를 등록한다.
+"""FastMCP stdio 서버. V1의 7개 도구를 등록한다.
 
 NOTE: MCP Python SDK의 FastMCP 인터페이스는 버전에 따라 변할 수 있음. 본 구현은
 mcp>=1.2.0 기준. 실패 시 mcp 패키지 docstring/예제 참고해서 어댑트.
@@ -12,6 +12,7 @@ from mcp.server.fastmcp import FastMCP
 from kr_mkt_mcp.config import load_config
 from kr_mkt_mcp.descriptions import (
     DESCRIPTION_CALL_META_API,
+    DESCRIPTION_CHECK_API_HEALTH,
     DESCRIPTION_GET_CREATIVE_PREVIEW,
     DESCRIPTION_GET_PERFORMANCE,
     DESCRIPTION_LIST_AD_ACCOUNTS,
@@ -20,6 +21,7 @@ from kr_mkt_mcp.descriptions import (
 )
 from kr_mkt_mcp.meta_client import MetaClient
 from kr_mkt_mcp.tools.call_meta_api import call_meta_api as _call_meta_api
+from kr_mkt_mcp.tools.check_api_health import check_api_health as _check_api_health
 from kr_mkt_mcp.tools.get_creative_preview import get_creative_preview as _get_creative_preview
 from kr_mkt_mcp.tools.get_performance import get_performance as _get_performance
 from kr_mkt_mcp.tools.list_ad_accounts import list_ad_accounts as _list_ad_accounts
@@ -94,6 +96,11 @@ async def get_performance(
 @mcp.tool(description=DESCRIPTION_GET_CREATIVE_PREVIEW)
 async def get_creative_preview(ad_id: str) -> dict:
     return await _get_creative_preview(_client(), ad_id=ad_id)
+
+
+@mcp.tool(description=DESCRIPTION_CHECK_API_HEALTH)
+async def check_api_health() -> dict:
+    return await _check_api_health(_client())
 
 
 @mcp.tool(description=DESCRIPTION_CALL_META_API)

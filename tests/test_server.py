@@ -1,11 +1,11 @@
-"""server.py 모듈은 FastMCP 인스턴스에 6개 도구를 등록한다."""
+"""server.py 모듈은 FastMCP 인스턴스에 7개 도구를 등록한다."""
 import pytest
 
 from kr_mkt_mcp.server import mcp
 
 
 @pytest.mark.asyncio
-async def test_server_has_six_tools():
+async def test_server_has_seven_tools():
     """FastMCP의 list_tools()로 실제 등록 검증."""
     tools = await mcp.list_tools()
     tool_names = {t.name for t in tools}
@@ -15,6 +15,7 @@ async def test_server_has_six_tools():
         "list_ads",
         "get_performance",
         "get_creative_preview",
+        "check_api_health",
         "call_meta_api",
     }
     assert tool_names == expected
