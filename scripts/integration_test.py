@@ -90,7 +90,19 @@ async def main() -> int:
                 print("\n⚠️ 광고 계정 0개 — 시스템 사용자에 광고 계정 권한 미할당 추정")
                 return 3
 
+            # 활성 캠페인 있는 첫 계정 자동 선택 (모든 계정에 0이면 첫 계정으로 fallback)
             account_id = accounts[0]["id"]
+            print("\n   계정별 활성 캠페인 수 확인...")
+            for acc in accounts:
+                try:
+                    rc = await session.call_tool("list_campaigns", {"account_id": acc["id"]})
+                    cdata = parse_tool_result(rc)
+                    n = len(cdata.get("data", []))
+                    print(f"      • {acc['id']}  {acc.get('name')}  → 활성 {n}개")
+                    if n > 0 and account_id == accounts[0]["id"]:
+                        account_id = acc["id"]  # 데이터 있는 첫 계정으로 픽
+                except Exception:
+                    pass
             print(f"\n   → 이후 테스트 대상 account_id: {account_id}\n")
 
             # ===== 2. list_campaigns =====
