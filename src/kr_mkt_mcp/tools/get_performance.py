@@ -30,6 +30,14 @@ _LEVEL_ID_FIELDS = {
     "ad": ("campaign_id", "campaign_name", "adset_id", "adset_name", "ad_id", "ad_name", "creative_id"),
 }
 
+# breakdown + top_n 적용 시 entity 그룹화 기준 — level별 primary entity
+_LEVEL_ENTITY_FIELD = {
+    "account": "account_id",
+    "campaign": "campaign_id",
+    "adset": "adset_id",
+    "ad": "ad_id",
+}
+
 
 def _resolve_metrics(*, tier: str, metrics: list[str] | None) -> list[str]:
     if metrics:
@@ -154,16 +162,14 @@ def _apply_top_n(
     if not breakdown:
         return sorted(rows, key=lambda r: _sort_key(r, sort_by), reverse=True)[:top_n]
 
-    # breakdown 있음: entity 기준 그룹화
-    entity_field = _LEVEL_ID_FIELDS[level][0]  # campaign_id, adset_id, ad_id 등
-    by_entity: dict[str, list[dict]] = {}
+    # breakdown 있음: level별 primary entity로 그룹화 → 합계 sort_by 상위 top_n entity 선택
+    entity_field = _LEVEL_ENTITY_FIELD[level]
     totals: dict[str, float] = {}
     for r in rows:
         eid = r.get(entity_field)
         if eid is None:
             continue
-        by_entity.setdefault(eid, []).append(r)
-        totals[eid] = totals.get(eid, 0) + (_sort_key(r, sort_by) or 0)
+        totals[eid] = totals.get(eid, 0.0) + _sort_key(r, sort_by)
 
     top_entities = sorted(totals.items(), key=lambda kv: kv[1], reverse=True)[:top_n]
     top_ids = {eid for eid, _ in top_entities}
