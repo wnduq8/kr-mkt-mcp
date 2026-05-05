@@ -59,7 +59,7 @@ DATE_PRESETS: tuple[str, ...] = (
     "last_30d",
     "this_month",
 )
-DATE_PRESET_DEFAULT = "last_7d"
+DATE_PRESET_DEFAULT: str = "last_7d"
 
 # Breakdown enum 멤버 — V1은 단일만
 BREAKDOWNS_ALLOWED: tuple[str, ...] = (
