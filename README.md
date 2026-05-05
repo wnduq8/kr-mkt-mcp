@@ -23,14 +23,17 @@ https://github.com/wnduq8/kr-mkt-mcp
 - META_ACCESS_TOKEN: <여기에_발급한_토큰_붙여넣기>
 
 설치 순서:
-1. PowerShell에서 `uv --version`을 실행해 uv가 설치돼 있는지 확인
-2. 없으면 다음 명령으로 먼저 설치하라고 안내:
+1. PowerShell에서 `git --version`을 실행해 Git이 설치돼 있는지 확인
+2. 없으면 다음 명령으로 설치하라고 안내 (winget):
+   winget install --id Git.Git -e --source winget
+   또는 https://git-scm.com/download/win 에서 인스톨러 다운로드. 설치 후 PowerShell 새로 열기
+3. 같은 방식으로 `uv --version` 확인 → 없으면 설치:
    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
    설치 후 PowerShell을 닫고 새로 열어야 PATH 반영됨
-3. %APPDATA%\Claude\claude_desktop_config.json 파일을 메모장으로 열어
+4. %APPDATA%\Claude\claude_desktop_config.json 파일을 메모장으로 열어
    mcpServers 객체에 kr-mkt-mcp 항목 추가 (기존 항목 있으면 보존)
-4. 시스템 트레이의 Claude 아이콘 우클릭 → Quit → 재실행으로 완전 재시작
-5. 새 채팅에서 "내 Meta 광고 계정 알려줘"로 동작 확인
+5. 시스템 트레이의 Claude 아이콘 우클릭 → Quit → 재실행으로 완전 재시작
+6. 새 채팅에서 "내 Meta 광고 계정 알려줘"로 동작 확인
 ```
 
 ### macOS 사용자
@@ -44,8 +47,10 @@ https://github.com/wnduq8/kr-mkt-mcp
 - META_ACCESS_TOKEN: <여기에_발급한_토큰_붙여넣기>
 
 설치 순서:
-1. Terminal에서 `uv --version`으로 uv 설치 확인
-2. 없으면 `curl -LsSf https://astral.sh/uv/install.sh | sh`로 설치 후 새 터미널 오픈
+1. Terminal에서 `git --version`으로 Git 설치 확인 — macOS는 보통 Xcode CLT에 포함.
+   없으면 `xcode-select --install` 또는 `brew install git`
+2. `uv --version`으로 uv 설치 확인 — 없으면 `curl -LsSf https://astral.sh/uv/install.sh | sh`
+   또는 `brew install uv`. 설치 후 새 터미널 오픈
 3. ~/Library/Application Support/Claude/claude_desktop_config.json의 mcpServers에
    kr-mkt-mcp 항목 추가 (기존 항목 보존)
 4. cmd+Q로 Claude Desktop 완전 종료 후 재실행
@@ -58,7 +63,31 @@ https://github.com/wnduq8/kr-mkt-mcp
 
 ## 🪟 Windows 직접 설치 (수동)
 
-### 1. uv 설치 (한 번만)
+### 1. Git 설치 (한 번만)
+
+본 MCP는 GitHub 저장소에서 직접 받으므로 Git이 필요합니다. 이미 설치돼있으면 건너뛰기.
+
+**PowerShell**에서 확인:
+
+```powershell
+git --version
+```
+
+`git version 2.x.x` 같은 출력이 보이면 OK. `'git'은(는) 인식되지 않습니다` 에러면 설치 필요.
+
+설치 방법 (택 1):
+
+**winget** (Windows 10/11 기본 제공):
+
+```powershell
+winget install --id Git.Git -e --source winget
+```
+
+**또는 인스톨러 다운로드**: https://git-scm.com/download/win → 다운로드한 .exe 실행. 옵션은 모두 기본값으로 Next 진행.
+
+설치 후 **PowerShell을 닫고 새로 열어야** PATH가 갱신됩니다.
+
+### 2. uv 설치 (한 번만)
 
 **PowerShell**을 관리자 권한 없이 새로 열어서:
 
@@ -76,11 +105,11 @@ uv --version
 
 > **PowerShell 미숙자**: 시작 메뉴 → "Windows PowerShell" 검색 → 클릭. 관리자 권한 불필요.
 
-### 2. 토큰 준비
+### 3. 토큰 준비
 
 [Meta API 토큰 발급](#meta-api-토큰-발급-510분) 섹션 참고. **`ads_read` 권한만** 발급.
 
-### 3. Claude Desktop config 편집
+### 4. Claude Desktop config 편집
 
 **PowerShell**에서:
 
@@ -116,7 +145,7 @@ notepad $env:APPDATA\Claude\claude_desktop_config.json
 
 저장 후 메모장 닫기.
 
-### 4. Claude Desktop 완전 재시작
+### 5. Claude Desktop 완전 재시작
 
 **창 X 버튼만 눌러선 안 됩니다.** 트레이 아이콘에서 종료해야 함:
 
@@ -126,7 +155,7 @@ notepad $env:APPDATA\Claude\claude_desktop_config.json
 
 작업 관리자(Ctrl+Shift+Esc)에서 "Claude" 프로세스가 모두 사라졌는지 확인하면 더 확실.
 
-### 5. 동작 확인
+### 6. 동작 확인
 
 새 채팅 창에 입력:
 
@@ -140,7 +169,21 @@ AI가 도구 호출 권한 승인을 요청 → **승인** → 광고 계정 목
 
 ## 🍎 macOS 직접 설치 (수동)
 
-### 1. uv 설치
+### 1. Git 설치 확인
+
+```bash
+git --version
+```
+
+macOS는 보통 Xcode Command Line Tools에 git이 포함돼 있어서 즉시 사용 가능. 만약 "command not found" 또는 설치 권유 팝업이 뜨면:
+
+```bash
+xcode-select --install
+```
+
+(또는 Homebrew 사용 시) `brew install git`. 설치 후 `git --version`으로 재확인.
+
+### 2. uv 설치
 
 Terminal에서:
 
@@ -156,7 +199,7 @@ brew install uv
 
 설치 후 새 터미널 열어서 `uv --version` 확인.
 
-### 2. config 편집
+### 3. config 편집
 
 Terminal에서:
 
@@ -172,13 +215,13 @@ echo '{"mcpServers":{}}' > "$HOME/Library/Application Support/Claude/claude_desk
 open -e "$HOME/Library/Application Support/Claude/claude_desktop_config.json"
 ```
 
-내용은 위 [Windows 3단계 JSON](#3-claude-desktop-config-편집)과 동일.
+내용은 위 [Windows 4단계 JSON](#4-claude-desktop-config-편집)과 동일.
 
-### 3. 재시작
+### 4. 재시작
 
 `cmd + Q`로 Claude Desktop 종료 후 재실행.
 
-### 4. 동작 확인
+### 5. 동작 확인
 
 `내 Meta 광고 계정 알려줘`
 
@@ -200,7 +243,9 @@ open -e "$HOME/Library/Application Support/Claude/claude_desktop_config.json"
 
 | 증상 | 해결 |
 |---|---|
+| **`'git'은(는) ... 인식되지 않습니다`** | Git 미설치 또는 PowerShell PATH 미갱신. `winget install --id Git.Git` 또는 https://git-scm.com/download/win 에서 설치. 설치 후 PowerShell 새로 열기 |
 | **`'uv'은(는) ... 인식되지 않습니다`** | PowerShell을 닫고 새로 열기 (PATH 갱신). 그래도 안 되면 절대경로: `command`를 `"%USERPROFILE%\.local\bin\uvx.exe"`로 |
+| **`Failed to clone repository` / `git: not found`** (Claude Desktop 로그) | uvx가 git+https 저장소를 받으려는데 git을 못 찾음. Git 설치 후 Claude Desktop 재시작 |
 | **Claude Desktop에서 kr-mkt-mcp가 안 보임** | 1) JSON 문법 오류 — [JSONLint](https://jsonlint.com/)로 검증 2) Claude Desktop 미재시작 (트레이 Quit 필수) |
 | **"failed" / "Server disconnected"** | 로그 확인: PowerShell에서 `Get-Content "$env:APPDATA\Claude\logs\mcp-server-kr-mkt-mcp.log" -Tail 30` |
 | **`META_ACCESS_TOKEN 환경 변수가 필요합니다`** | config의 토큰 자리에 `여기에_발급한_토큰_붙여넣기`가 그대로 남아있음. 본인 토큰으로 교체 |
